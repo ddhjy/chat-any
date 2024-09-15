@@ -29,6 +29,8 @@ export default async function Command() {
     await fs.writeFile(filePath, text);
     await execPromise(`open -a Cursor "${directoryPath}"`);
     await execPromise(`open -a Cursor "${filePath}"`);
+    // delay 500ms
+    await new Promise(resolve => setTimeout(resolve, 500));
     await execPromise(`osascript -e 'tell application "System Events" to keystroke "l" using {command down}'`);
 
   } catch (error) {
