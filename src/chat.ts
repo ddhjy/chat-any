@@ -9,20 +9,27 @@ const execPromise = util.promisify(exec);
 const filePath = "/Users/zengkai/Library/Mobile Documents/com~apple~CloudDocs/Ask/content.md";
 const directoryPath = path.dirname(filePath);
 
-// 新增函数:递归读取文件夹中的所有文件内容
-async function readDirectoryContents(dirPath: string): Promise<string> {
+// 修改函数：递归读取文件夹中的所有文件内容，并包含文件路径，忽略 .git 目录
+async function readDirectoryContents(dirPath: string, basePath: string = ''): Promise<string> {
   let content = "";
   const items = await fs.readdir(dirPath, { withFileTypes: true });
-  
+
   for (const item of items) {
+    // 忽略 .git 目录
+    if (item.isDirectory() && item.name === '.git') {
+      continue;
+    }
+
     const itemPath = path.join(dirPath, item.name);
+    const relativePath = path.join(basePath, item.name);
     if (item.isDirectory()) {
-      content += await readDirectoryContents(itemPath);
+      content += await readDirectoryContents(itemPath, relativePath);
     } else {
+      content += `文件: ${relativePath}\n`;
       content += await fs.readFile(itemPath, 'utf-8') + "\n\n";
     }
   }
-  
+
   return content;
 }
 
@@ -47,10 +54,10 @@ function isFile(itemPath: string): boolean {
 export default async function Command() {
   try {
     let text = '';
-    
+
     // 尝试获取选中的Finder项目
     const selectedItems = await getSelectedFinderItems();
-    
+
     if (selectedItems.length > 0) {
       for (const item of selectedItems) {
         if (isDirectory(item.path)) {
@@ -69,7 +76,7 @@ export default async function Command() {
         console.error("获取选中文本失败:", error);
         text = '';
       }
-      
+
       // 如果没有选中文本，则使用剪贴板内容
       if (!text) {
         const clipboardText = await Clipboard.readText();
