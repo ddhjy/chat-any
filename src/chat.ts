@@ -9,24 +9,24 @@ const execPromise = util.promisify(exec);
 const filePath = "/Users/zengkai/Library/Mobile Documents/com~apple~CloudDocs/Ask/content.md";
 const directoryPath = path.dirname(filePath);
 
-// 修改函数：递归读取文件夹中的所有文件内容，并包含文件路径，忽略 .git 目录
+// 修改函数：递归读取文件夹中的所有文件内容，并包含文件路径，忽略 .git 目录和 .DS_Store 文件
 async function readDirectoryContents(dirPath: string, basePath: string = ''): Promise<string> {
   let content = "";
   const items = await fs.readdir(dirPath, { withFileTypes: true });
 
   for (const item of items) {
-    // 忽略 .git 目录
-    if (item.isDirectory() && item.name === '.git') {
+    // 忽略 .git 目录、.DS_Store 文件和其他隐藏文件
+    if (item.name.startsWith('.')) {
       continue;
     }
 
     const itemPath = path.join(dirPath, item.name);
     const relativePath = path.join(basePath, item.name);
+    
     if (item.isDirectory()) {
       content += await readDirectoryContents(itemPath, relativePath);
     } else {
-      content += `文件: ${relativePath}\n`;
-      content += await fs.readFile(itemPath, 'utf-8') + "\n\n";
+      content += `文件: ${relativePath}\n${await fs.readFile(itemPath, 'utf-8')}\n\n`;
     }
   }
 
