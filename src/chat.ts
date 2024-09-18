@@ -100,8 +100,6 @@ export default async function Command() {
     // delay 500ms
     await new Promise(resolve => setTimeout(resolve, 500));
     await execPromise(`osascript -e 'tell application "System Events" to keystroke "l" using {command down}'`);
-
-    await showHUD("操作成功");
   } catch (error) {
     console.error("操作失败:", error);
     await showHUD("操作失败");
