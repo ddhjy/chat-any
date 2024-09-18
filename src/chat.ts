@@ -6,7 +6,7 @@ import path from "path";
 import { statSync } from 'fs';
 
 const execPromise = util.promisify(exec);
-const filePath = "/Users/zengkai/Library/Mobile Documents/com~apple~CloudDocs/Ask/content.md";
+const filePath = "/Users/zengkai/Library/Mobile Documents/com~apple~CloudDocs/Chat Any/context.txt";
 const directoryPath = path.dirname(filePath);
 
 // 修改函数：递归读取文件夹中的所有文件内容，并包含文件路径，忽略 .git 目录和 .DS_Store 文件
@@ -22,7 +22,7 @@ async function readDirectoryContents(dirPath: string, basePath: string = ''): Pr
 
     const itemPath = path.join(dirPath, item.name);
     const relativePath = path.join(basePath, item.name);
-    
+
     if (item.isDirectory()) {
       content += await readDirectoryContents(itemPath, relativePath);
     } else {
@@ -66,7 +66,7 @@ export default async function Command() {
             text += await readDirectoryContents(item.path) + '\n\n';
           } else if (isFile(item.path)) {
             // 如果是单个文件，读取文件内容
-            text += await fs.readFile(item.path, 'utf-8') + '\n\n';
+            text += `文件: ${item.path}\n${await fs.readFile(item.path, 'utf-8')}\n\n`;
           }
         }
       }
