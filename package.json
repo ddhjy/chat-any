@@ -1,8 +1,8 @@
 {
   "$schema": "https://www.raycast.com/schemas/extension.json",
-  "name": "chat-selected",
-  "title": "Chat Selected",
-  "description": "Chat with selected text",
+  "name": "chat-any",
+  "title": "Chat Any",
+  "description": "Chat with any selected text",
   "icon": "extension-icon.png",
   "author": "ddhjy2012",
   "license": "MIT",
