@@ -56,35 +56,41 @@ export default async function Command() {
     let text = '';
 
     // 尝试获取选中的Finder项目
-    const selectedItems = await getSelectedFinderItems();
+    try {
+      const selectedItems = await getSelectedFinderItems();
 
-    if (selectedItems.length > 0) {
-      for (const item of selectedItems) {
-        if (isDirectory(item.path)) {
-          // 如果是文件夹，读取文件夹中所有文件的内容
-          text += await readDirectoryContents(item.path) + '\n\n';
-        } else if (isFile(item.path)) {
-          // 如果是单个文件，读取文件内容
-          text += await fs.readFile(item.path, 'utf-8') + '\n\n';
+      if (selectedItems.length > 0) {
+        for (const item of selectedItems) {
+          if (isDirectory(item.path)) {
+            // 如果是文件夹，读取文件夹中所有文件的内容
+            text += await readDirectoryContents(item.path) + '\n\n';
+          } else if (isFile(item.path)) {
+            // 如果是单个文件，读取文件内容
+            text += await fs.readFile(item.path, 'utf-8') + '\n\n';
+          }
         }
       }
-    } else {
-      // 如果没有选中文件，尝试获取选中的文本
+    } catch (error) {
+      console.error("获取选中的Finder项目失败:", error);
+      // 如果获取Finder项目失败，继续执行后续代码
+    }
+
+    // 如果没有从Finder获取到内容，尝试获取选中的文本
+    if (!text) {
       try {
         text = await getSelectedText();
       } catch (error) {
         console.error("获取选中文本失败:", error);
-        text = '';
       }
+    }
 
-      // 如果没有选中文本，则使用剪贴板内容
-      if (!text) {
-        const clipboardText = await Clipboard.readText();
-        if (!clipboardText) {
-          return await showHUD("没有选中文件或文本，剪贴板也为空");
-        }
-        text = clipboardText;
+    // 如果仍然没有内容，则使用剪贴板内容
+    if (!text) {
+      const clipboardText = await Clipboard.readText();
+      if (!clipboardText) {
+        return await showHUD("没有选中文件、文本，剪贴板也为空");
       }
+      text = clipboardText;
     }
 
     // 将文本内容写入指定文件
@@ -95,6 +101,7 @@ export default async function Command() {
     await new Promise(resolve => setTimeout(resolve, 500));
     await execPromise(`osascript -e 'tell application "System Events" to keystroke "l" using {command down}'`);
 
+    await showHUD("操作成功");
   } catch (error) {
     console.error("操作失败:", error);
     await showHUD("操作失败");
