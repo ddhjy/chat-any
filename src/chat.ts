@@ -11,6 +11,13 @@ const chatAnyPath = path.join(documentsPath, 'Chat Any');
 const filePath = path.join(chatAnyPath, 'context.txt');
 const directoryPath = chatAnyPath;
 
+// 常见的二进制和媒体文件扩展名
+const binaryMediaExtensions = [
+  '.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tiff',
+  '.mp3', '.wav', '.flac', '.mp4', '.avi', '.mkv',
+  '.exe', '.dll', '.bin', '.iso', '.zip', '.rar'
+];
+
 // 确保目录存在的函数
 async function ensureDirectoryExists(dirPath: string) {
   try {
@@ -20,14 +27,25 @@ async function ensureDirectoryExists(dirPath: string) {
   }
 }
 
-// 修改函数：递归读取文件夹中的所有文件内容，并包含文件路径，忽略 .git 目录和 .DS_Store 文件
+// 检查文件是否为二进制或媒体文件
+function isBinaryOrMediaFile(fileName: string): boolean {
+  const ext = path.extname(fileName).toLowerCase();
+  return binaryMediaExtensions.includes(ext);
+}
+
+// 递归读取文件夹中的所有文件内容，并包含文件路径，忽略 .git 目录、.DS_Store 文件及二进制媒体文件
 async function readDirectoryContents(dirPath: string, basePath: string = ''): Promise<string> {
   let content = "";
   const items = await fs.readdir(dirPath, { withFileTypes: true });
 
   for (const item of items) {
-    // 忽略 .git 目录、.DS_Store 文件和其他隐藏文件
+    // 忽略隐藏文件夹和文件
     if (item.name.startsWith('.')) {
+      continue;
+    }
+
+    // 忽略二进制和媒体文件
+    if (!item.isDirectory() && isBinaryOrMediaFile(item.name)) {
       continue;
     }
 
@@ -37,7 +55,12 @@ async function readDirectoryContents(dirPath: string, basePath: string = ''): Pr
     if (item.isDirectory()) {
       content += await readDirectoryContents(itemPath, relativePath);
     } else {
-      content += `文件: ${relativePath}\n${await fs.readFile(itemPath, 'utf-8')}\n\n`;
+      try {
+        const fileContent = await fs.readFile(itemPath, 'utf-8');
+        content += `文件: ${relativePath}\n${fileContent}\n\n`;
+      } catch (readError) {
+        console.info(`读取文件失败 (${relativePath}):`, readError);
+      }
     }
   }
 
@@ -81,9 +104,14 @@ export default async function Command() {
           if (isDirectory(item.path)) {
             // 如果是文件夹，读取文件夹中所有文件的内容
             text += await readDirectoryContents(item.path) + '\n\n';
-          } else if (isFile(item.path)) {
-            // 如果是单个文件，读取文件内容
-            text += `文件: ${item.path}\n${await fs.readFile(item.path, 'utf-8')}\n\n`;
+          } else if (isFile(item.path) && !isBinaryOrMediaFile(item.path)) {
+            // 如果是单个文件且非二进制媒体文件，读取文件内容
+            try {
+              const fileContent = await fs.readFile(item.path, 'utf-8');
+              text += `文件: ${item.path}\n${fileContent}\n\n`;
+            } catch (readError) {
+              console.info(`读取文件失败 (${item.path}):`, readError);
+            }
           }
         }
       }
@@ -103,20 +131,39 @@ export default async function Command() {
 
     // 如果仍然没有内容，则使用剪贴板内容
     if (!text) {
-      const clipboardText = await Clipboard.readText();
-      if (!clipboardText) {
-        return await showHUD("没有选中文件、文本，剪贴板也为空");
+      try {
+        const clipboardText = await Clipboard.readText();
+        if (clipboardText) {
+          text = clipboardText;
+        } else {
+          return await showHUD("没有选中文件、文本，剪贴板也为空");
+        }
+      } catch (clipboardError) {
+        console.info("读取剪贴板内容失败:", clipboardError);
+        return await showHUD("无法读取剪贴板内容");
       }
-      text = clipboardText;
     }
 
     // 将文本内容写入指定文件
-    await fs.writeFile(filePath, text);
-    await execPromise(`open -a Cursor "${directoryPath}"`);
-    await execPromise(`open -a Cursor "${filePath}"`);
-    // delay 500ms
-    await new Promise(resolve => setTimeout(resolve, 500));
-    await execPromise(`osascript -e 'tell application "System Events" to keystroke "l" using {command down}'`);
+    try {
+      await fs.writeFile(filePath, text, 'utf-8');
+    } catch (writeError) {
+      console.info("写入文件失败:", writeError);
+      return await showHUD("无法写入文件");
+    }
+
+    // 打开目录和文件
+    try {
+      await execPromise(`open -a Cursor "${directoryPath}"`);
+      await execPromise(`open -a Cursor "${filePath}"`);
+      // 延迟500毫秒
+      await new Promise(resolve => setTimeout(resolve, 500));
+      await execPromise(`osascript -e 'tell application "System Events" to keystroke "l" using {command down}'`);
+    } catch (execError) {
+      console.info("打开应用或模拟按键失败:", execError);
+      return await showHUD("无法打开应用或执行操作");
+    }
+
   } catch (error) {
     console.info("操作失败:", error);
     await showHUD("操作失败");
