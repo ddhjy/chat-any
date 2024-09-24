@@ -15,7 +15,31 @@ const directoryPath = chatAnyPath;
 const binaryMediaExtensions = [
   '.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tiff',
   '.mp3', '.wav', '.flac', '.mp4', '.avi', '.mkv',
-  '.exe', '.dll', '.bin', '.iso', '.zip', '.rar'
+  '.exe', '.dll', '.bin', '.iso', '.zip', '.rar', '.xcodeproj', '.xcworkspace'
+];
+
+// 需要忽略内容的特定文件和文件夹
+const ignoredItems = [
+  'node_modules',
+  'dist',
+  'build',
+  '.git',
+  '.DS_Store',
+  'package-lock.json',
+  'yarn.lock',
+  'coverage',
+  'tmp',
+  'logs',
+  '.vscode',
+  '.idea',
+  '.env',
+  '.env.local',
+  '.cache',
+  'public',
+  'assets',
+  'vendor',
+  'bower_components',
+  'jspm_packages'
 ];
 
 // 确保目录存在的函数
@@ -33,33 +57,31 @@ function isBinaryOrMediaFile(fileName: string): boolean {
   return binaryMediaExtensions.includes(ext);
 }
 
-// 递归读取文件夹中的所有文件内容，并包含文件路径，忽略 .git 目录、.DS_Store 文件及二进制媒体文件
+// 检查是否为需要忽略内容的项目
+function isIgnoredItem(itemName: string): boolean {
+  return ignoredItems.includes(itemName);
+}
+
+// 递归读取文件夹中的所有文件内容，并包含文件路径，忽略特定文件和文件夹的内容及二进制媒体文件
 async function readDirectoryContents(dirPath: string, basePath: string = ''): Promise<string> {
   let content = "";
   const items = await fs.readdir(dirPath, { withFileTypes: true });
 
   for (const item of items) {
-    // 忽略隐藏文件夹和文件
-    if (item.name.startsWith('.')) {
-      continue;
-    }
-
-    // 忽略二进制和媒体文件
-    if (!item.isDirectory() && isBinaryOrMediaFile(item.name)) {
-      continue;
-    }
-
     const itemPath = path.join(dirPath, item.name);
     const relativePath = path.join(basePath, item.name);
 
-    if (item.isDirectory()) {
+    if (isIgnoredItem(item.name) || isBinaryOrMediaFile(item.name)) {
+      content += `文件：${relativePath} (内容已忽略)\n\n`;
+    } else if (item.isDirectory()) {
       content += await readDirectoryContents(itemPath, relativePath);
     } else {
       try {
         const fileContent = await fs.readFile(itemPath, 'utf-8');
-        content += `文件: ${relativePath}\n${fileContent}\n\n`;
+        content += `文件：${relativePath}\n${fileContent}\n\n`;
       } catch (readError) {
         console.info(`读取文件失败 (${relativePath}):`, readError);
+        content += `文件：${relativePath} (读取失败)\n\n`;
       }
     }
   }
@@ -101,16 +123,22 @@ export default async function Command() {
 
       if (selectedItems.length > 0) {
         for (const item of selectedItems) {
-          if (isDirectory(item.path)) {
+          if (isIgnoredItem(path.basename(item.path))) {
+            text += `${item.path} (内容已忽略)\n\n`;
+          } else if (isDirectory(item.path)) {
             // 如果是文件夹，读取文件夹中所有文件的内容
             text += await readDirectoryContents(item.path) + '\n\n';
-          } else if (isFile(item.path) && !isBinaryOrMediaFile(item.path)) {
-            // 如果是单个文件且非二进制媒体文件，读取文件内容
-            try {
-              const fileContent = await fs.readFile(item.path, 'utf-8');
-              text += `文件: ${item.path}\n${fileContent}\n\n`;
-            } catch (readError) {
-              console.info(`读取文件失败 (${item.path}):`, readError);
+          } else if (isFile(item.path)) {
+            if (isBinaryOrMediaFile(item.path)) {
+              text += `文件: ${item.path} (二进制或媒体文件，内容已忽略)\n\n`;
+            } else {
+              try {
+                const fileContent = await fs.readFile(item.path, 'utf-8');
+                text += `文件: ${item.path}\n${fileContent}\n\n`;
+              } catch (readError) {
+                console.info(`读取文件失败 (${item.path}):`, readError);
+                text += `文件: ${item.path} (读取失败)\n\n`;
+              }
             }
           }
         }
