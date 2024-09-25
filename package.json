@@ -12,6 +12,12 @@
       "title": "Chat",
       "description": "Chat with selected text",
       "mode": "no-view"
+    },
+    {
+      "name": "chat-append",
+      "title": "Chat Append",
+      "description": "Append selected text to context",
+      "mode": "no-view"
     }
   ],
   "dependencies": {

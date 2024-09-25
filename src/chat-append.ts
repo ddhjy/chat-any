@@ -1,4 +1,4 @@
-// src/chat.ts
+// src/chat-append.ts
 import fs from "fs/promises";
 import { ensureDirectoryExists, getContentFromClipboard, getContentFromSelectedItems, getContentFromSelectedText, openDirectoryAndFile, chatAnyPath, filePath, showErrorHUD } from "./common";
 
@@ -22,9 +22,9 @@ export default async function Command() {
       }
     }
 
-    // **替换内容到文件**
+    // **追加内容到文件**
     try {
-      await fs.writeFile(filePath, text, 'utf-8');
+      await fs.appendFile(filePath, text, 'utf-8');
     } catch {
       return await showErrorHUD("无法写入文件");
     }
