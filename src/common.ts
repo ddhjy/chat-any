@@ -176,3 +176,39 @@ export async function openDirectoryAndFile() {
 export async function showErrorHUD(message: string) {
   await showHUD(message);
 }
+
+// 新增的通用函数
+export async function handleChatOperation(operation: 'write' | 'append') {
+  try {
+    await ensureDirectoryExists(chatAnyPath);
+
+    let text = await getContentFromSelectedItems();
+    if (!text) {
+      text = await getContentFromSelectedText();
+    }
+    if (!text) {
+      text = await getContentFromClipboard();
+      if (!text) {
+        return await showErrorHUD("没有选中文件、文本，剪贴板也为空");
+      }
+    }
+
+    try {
+      if (operation === 'write') {
+        await fs.writeFile(filePath, text, 'utf-8');
+      } else {
+        await fs.appendFile(filePath, "\n" + text, 'utf-8');
+      }
+    } catch {
+      return await showErrorHUD("无法写入文件");
+    }
+
+    try {
+      await openDirectoryAndFile();
+    } catch {
+      return await showErrorHUD("无法打开应用或执行操作");
+    }
+  } catch {
+    await showErrorHUD("操作失败");
+  }
+}
