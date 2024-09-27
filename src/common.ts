@@ -2,49 +2,44 @@
 import fs from 'fs/promises';
 import path from 'path';
 import { homedir } from 'os';
-import { getSelectedFinderItems, getSelectedText, Clipboard, showHUD } from '@raycast/api';
-import util from 'util';
+import {
+  getSelectedFinderItems,
+  getSelectedText,
+  Clipboard,
+  showHUD
+} from '@raycast/api';
+import { promisify } from 'util';
 import { exec } from 'child_process';
 
-// 路径设置
-export const documentsPath = path.join(homedir(), 'Documents');
-export const chatAnyPath = path.join(documentsPath, 'Chat Any');
-export const filePath = path.join(chatAnyPath, 'context.txt');
-export const directoryPath = chatAnyPath;
+// Constants
+const DOCUMENTS_PATH = path.join(homedir(), 'Documents');
+const CHAT_ANY_PATH = path.join(DOCUMENTS_PATH, 'Chat Any');
+const FILE_PATH = path.join(CHAT_ANY_PATH, 'context.txt');
+const DIRECTORY_PATH = CHAT_ANY_PATH;
 
-// 常见的二进制和媒体文件扩展名
-export const binaryMediaExtensions = new Set([
+// Sets for file filtering
+const BINARY_MEDIA_EXTENSIONS = new Set([
   '.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tiff',
   '.mp3', '.wav', '.flac', '.mp4', '.avi', '.mkv',
-  '.exe', '.dll', '.bin', '.iso', '.zip', '.rar', '.xcodeproj', '.xcworkspace'
+  '.exe', '.dll', '.bin', '.iso', '.zip', '.rar',
+  '.xcodeproj', '.xcworkspace'
 ]);
 
-// 需要忽略的文件和文件夹
-export const ignoredItems = new Set([
-  'node_modules',
-  'dist',
-  'build',
-  '.git',
-  '.DS_Store',
-  'package-lock.json',
-  'yarn.lock',
-  'coverage',
-  'tmp',
-  'logs',
-  '.vscode',
-  '.idea',
-  '.env',
-  '.env.local',
-  '.cache',
-  'public',
-  'assets',
-  'vendor',
-  'bower_components',
+const IGNORED_ITEMS = new Set([
+  'node_modules', 'dist', 'build', '.git', '.DS_Store',
+  'package-lock.json', 'yarn.lock', 'coverage', 'tmp',
+  'logs', '.vscode', '.idea', '.env', '.env.local',
+  '.cache', 'public', 'assets', 'vendor', 'bower_components',
   'jspm_packages'
 ]);
 
-// 确保目录存在
-export async function ensureDirectoryExists(dirPath: string) {
+// Utility Functions
+
+/**
+ * Ensures that a directory exists. If it does not, creates it recursively.
+ * @param dirPath - The path of the directory to ensure.
+ */
+export async function ensureDirectoryExists(dirPath: string): Promise<void> {
   try {
     await fs.access(dirPath);
   } catch {
@@ -52,18 +47,30 @@ export async function ensureDirectoryExists(dirPath: string) {
   }
 }
 
-// 检查文件是否为二进制或媒体文件
+/**
+ * Checks if a file is a binary or media file based on its extension.
+ * @param fileName - The name of the file to check.
+ * @returns True if the file is binary or media, otherwise false.
+ */
 export function isBinaryOrMediaFile(fileName: string): boolean {
   const ext = path.extname(fileName).toLowerCase();
-  return binaryMediaExtensions.has(ext);
+  return BINARY_MEDIA_EXTENSIONS.has(ext);
 }
 
-// 检查是否为忽略的项目
+/**
+ * Checks if an item should be ignored based on its name.
+ * @param itemName - The name of the item to check.
+ * @returns True if the item is to be ignored, otherwise false.
+ */
 export function isIgnoredItem(itemName: string): boolean {
-  return ignoredItems.has(itemName);
+  return IGNORED_ITEMS.has(itemName);
 }
 
-// 异步检查路径是否为目录
+/**
+ * Determines if a given path is a directory.
+ * @param itemPath - The path to check.
+ * @returns True if the path is a directory, otherwise false.
+ */
 export async function isDirectory(itemPath: string): Promise<boolean> {
   try {
     const stats = await fs.lstat(itemPath);
@@ -73,7 +80,11 @@ export async function isDirectory(itemPath: string): Promise<boolean> {
   }
 }
 
-// 异步检查路径是否为文件
+/**
+ * Determines if a given path is a file.
+ * @param itemPath - The path to check.
+ * @returns True if the path is a file, otherwise false.
+ */
 export async function isFile(itemPath: string): Promise<boolean> {
   try {
     const stats = await fs.lstat(itemPath);
@@ -83,104 +94,144 @@ export async function isFile(itemPath: string): Promise<boolean> {
   }
 }
 
-// 递归读取目录内容
+/**
+ * Recursively reads the contents of a directory.
+ * @param dirPath - The directory path to read.
+ * @param basePath - The base path for relative paths.
+ * @returns A string representing the directory contents.
+ */
 export async function readDirectoryContents(dirPath: string, basePath: string = ''): Promise<string> {
   let content = "";
-  const items = await fs.readdir(dirPath, { withFileTypes: true });
+  try {
+    const items = await fs.readdir(dirPath, { withFileTypes: true });
 
-  for (const item of items) {
-    const itemName = item.name;
-    const itemPath = path.join(dirPath, itemName);
-    const relativePath = path.join(basePath, itemName);
+    for (const item of items) {
+      const itemName = item.name;
+      const itemPath = path.join(dirPath, itemName);
+      const relativePath = path.join(basePath, itemName);
 
-    if (isIgnoredItem(itemName) || isBinaryOrMediaFile(itemName)) {
-      content += `文件：${relativePath} (内容已忽略)\n\n`;
-    } else if (item.isDirectory()) {
-      content += await readDirectoryContents(itemPath, relativePath);
-    } else {
-      try {
-        const fileContent = await fs.readFile(itemPath, 'utf-8');
-        content += `文件：${relativePath}\n${fileContent}\n\n`;
-      } catch {
-        content += `文件：${relativePath} (读取失败)\n\n`;
+      if (isIgnoredItem(itemName) || isBinaryOrMediaFile(itemName)) {
+        content += `文件：${relativePath} (内容已忽略)\n\n`;
+      } else if (item.isDirectory()) {
+        content += await readDirectoryContents(itemPath, relativePath);
+      } else {
+        try {
+          const fileContent = await fs.readFile(itemPath, 'utf-8');
+          content += `文件：${relativePath}\n${fileContent}\n\n`;
+        } catch {
+          content += `文件：${relativePath} (读取失败)\n\n`;
+        }
       }
     }
+  } catch (error) {
+    console.error(`读取目录失败: ${dirPath}`, error);
+    content += `目录：${dirPath} (读取失败)\n\n`;
   }
 
   return content;
 }
 
-// 获取选中 Finder 项目的内容
+/**
+ * Retrieves content from the selected Finder items.
+ * @returns A string containing the combined content.
+ */
 export async function getContentFromSelectedItems(): Promise<string> {
   let content = '';
   try {
     const selectedItems = await getSelectedFinderItems();
 
-    if (selectedItems.length > 0) {
-      for (const item of selectedItems) {
-        const itemName = path.basename(item.path);
-        const itemPath = item.path;
+    for (const item of selectedItems) {
+      const itemName = path.basename(item.path);
+      const itemPath = item.path;
 
-        if (isIgnoredItem(itemName)) {
-          content += `${itemPath} (内容已忽略)\n\n`;
-        } else if (await isDirectory(itemPath)) {
-          content += await readDirectoryContents(itemPath) + '\n\n';
-        } else if (await isFile(itemPath)) {
-          if (isBinaryOrMediaFile(itemPath)) {
-            content += `文件：${itemPath} (二进制或媒体文件，内容已忽略)\n\n`;
-          } else {
-            try {
-              const fileContent = await fs.readFile(itemPath, 'utf-8');
-              content += `文件：${itemPath}\n${fileContent}\n\n`;
-            } catch {
-              content += `文件：${itemPath} (读取失败)\n\n`;
-            }
+      if (isIgnoredItem(itemName)) {
+        content += `${itemPath} (内容已忽略)\n\n`;
+      } else if (await isDirectory(itemPath)) {
+        content += await readDirectoryContents(itemPath) + '\n\n';
+      } else if (await isFile(itemPath)) {
+        if (isBinaryOrMediaFile(itemPath)) {
+          content += `文件：${itemPath} (二进制或媒体文件，内容已忽略)\n\n`;
+        } else {
+          try {
+            const fileContent = await fs.readFile(itemPath, 'utf-8');
+            content += `文件：${itemPath}\n${fileContent}\n\n`;
+          } catch {
+            content += `文件：${itemPath} (读取失败)\n\n`;
           }
         }
       }
     }
-  } catch {
-    // 忽略错误，返回空字符串
+  } catch (error) {
+    console.error('获取选中 Finder 项目失败', error);
+    // 返回空字符串，已在外层处理错误
   }
   return content;
 }
 
-// 获取选中文本的内容
+/**
+ * Retrieves content from the selected text.
+ * @returns A string containing the selected text.
+ */
 export async function getContentFromSelectedText(): Promise<string> {
   try {
     return await getSelectedText();
-  } catch {
+  } catch (error) {
+    console.error('获取选中文本失败', error);
     return '';
   }
 }
 
-// 获取剪贴板的内容
+/**
+ * Retrieves content from the clipboard.
+ * @returns A string containing the clipboard text.
+ */
 export async function getContentFromClipboard(): Promise<string> {
   try {
-    return (await Clipboard.readText()) || '';
-  } catch {
+    const clipboardText = await Clipboard.readText();
+    return clipboardText || '';
+  } catch (error) {
+    console.error('获取剪贴板内容失败', error);
     return '';
   }
 }
 
-// 打开目录和文件，并模拟按键
-export async function openDirectoryAndFile() {
-  const execPromise = util.promisify(exec);
-  await execPromise(`open -a Cursor "${directoryPath}"`);
-  await execPromise(`open -a Cursor "${filePath}"`);
-  await new Promise(resolve => setTimeout(resolve, 500));
-  await execPromise(`osascript -e 'tell application "System Events" to keystroke "l" using {command down}'`);
-}
-
-// 显示 HUD 信息
-export async function showErrorHUD(message: string) {
-  await showHUD(message);
-}
-
-// 新增的通用函数
-export async function handleChatOperation(operation: 'write' | 'append') {
+/**
+ * Opens the specified directory and file, then simulates a key press.
+ */
+export async function openDirectoryAndFile(): Promise<void> {
+  const execPromise = promisify(exec);
   try {
-    await ensureDirectoryExists(chatAnyPath);
+    await execPromise(`open -a Cursor "${DIRECTORY_PATH}"`);
+    await execPromise(`open -a Cursor "${FILE_PATH}"`);
+    await new Promise(resolve => setTimeout(resolve, 500));
+    await execPromise(`osascript -e 'tell application "System Events" to keystroke "l" using {command down}'`);
+  } catch (error) {
+    console.error('打开目录或文件失败', error);
+    throw new Error('无法打开应用或执行操作');
+  }
+}
+
+/**
+ * Displays an error message using HUD.
+ * @param message - The message to display.
+ */
+export async function showErrorHUD(message: string): Promise<void> {
+  try {
+    await showHUD(message);
+  } catch (error) {
+    console.error('显示 HUD 失败', error);
+  }
+}
+
+// Main Operation Function
+
+/**
+ * Handles chat operations by writing or appending content.
+ * @param operation - The type of operation: 'write' or 'append'.
+ */
+export async function handleChatOperation(operation: 'write' | 'append'): Promise<void> {
+  try {
+    await ensureDirectoryExists(CHAT_ANY_PATH);
 
     let text = await getContentFromSelectedItems();
     if (!text) {
@@ -189,26 +240,30 @@ export async function handleChatOperation(operation: 'write' | 'append') {
     if (!text) {
       text = await getContentFromClipboard();
       if (!text) {
-        return await showErrorHUD("没有选中文件、文本，剪贴板也为空");
+        await showErrorHUD("没有选中文件、文本，剪贴板也为空");
+        return;
       }
     }
 
     try {
       if (operation === 'write') {
-        await fs.writeFile(filePath, text, 'utf-8');
+        await fs.writeFile(FILE_PATH, text, 'utf-8');
       } else {
-        await fs.appendFile(filePath, "\n" + text, 'utf-8');
+        await fs.appendFile(FILE_PATH, `\n${text}`, 'utf-8');
       }
-    } catch {
-      return await showErrorHUD("无法写入文件");
+    } catch (error) {
+      console.error('写入文件失败', error);
+      await showErrorHUD("无法写入文件");
+      return;
     }
 
     try {
       await openDirectoryAndFile();
-    } catch {
-      return await showErrorHUD("无法打开应用或执行操作");
+    } catch (error) {
+      await showErrorHUD("无法打开应用或执行操作");
     }
-  } catch {
+  } catch (error) {
+    console.error('操作失败', error);
     await showErrorHUD("操作失败");
   }
 }
