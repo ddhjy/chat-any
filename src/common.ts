@@ -252,7 +252,7 @@ export async function handleChatOperation(operation: 'write' | 'append'): Promis
       if (operation === 'write') {
         await fs.writeFile(FILE_PATH, text, 'utf-8');
       } else {
-        await fs.appendFile(FILE_PATH, `\n${text}`, 'utf-8');
+        await fs.appendFile(FILE_PATH, `\n\n${text}`, 'utf-8');
       }
     } catch (error) {
       console.error('写入文件失败', error);
