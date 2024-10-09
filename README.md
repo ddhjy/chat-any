@@ -23,7 +23,6 @@ https://github.com/user-attachments/assets/4e5030a9-b90a-41f2-867f-d2e9afc72088
 ### 前提条件
 
 - 已安装 [Raycast](https://www.raycast.com/)。
-- 系统支持 Node.js。
 
 ### 步骤
 
