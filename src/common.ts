@@ -198,16 +198,11 @@ export async function getContentFromClipboard(): Promise<string> {
 /**
  * Opens the specified directory and file, then simulates a key press.
  */
-export async function openDirectoryAndFile(operation: 'write' | 'append'): Promise<void> {
+export async function openDirectoryAndFile(): Promise<void> {
   const execPromise = promisify(exec);
   try {
     await execPromise(`open -a Cursor "${DIRECTORY_PATH}"`);
     await execPromise(`open -a Cursor "${FILE_PATH}"`);
-    
-    if (operation === 'write') {
-      await new Promise(resolve => setTimeout(resolve, 500));
-      await execPromise(`osascript -e 'tell application "System Events" to keystroke "l" using {command down}'`);
-    }
   } catch (error) {
     console.error('打开目录或文件失败', error);
     throw new Error('无法打开应用或执行操作');
@@ -261,7 +256,7 @@ export async function handleChatOperation(operation: 'write' | 'append'): Promis
     }
 
     try {
-      await openDirectoryAndFile(operation);
+      await openDirectoryAndFile();
     } catch (error) {
       await showErrorHUD("无法打开应用或执行操作");
     }
