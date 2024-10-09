@@ -10,6 +10,9 @@
 - **集中编辑**：将收集的内容汇总到 `context.txt` 文件中，存储于用户的 `Documents/Chat Any` 目录下，并用 Cursor 进行编辑。
 - **追加内容**：支持将新的内容追加到已有的 `context.txt` 文件中，方便持续编辑。
 
+## 演示
+https://github.com/user-attachments/assets/4e5030a9-b90a-41f2-867f-d2e9afc72088
+
 ## 安装
 
 ### 前提条件
