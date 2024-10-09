@@ -11,6 +11,11 @@
 - **追加内容**：支持将新的内容追加到已有的 `context.txt` 文件中，方便持续编辑。
 
 ## 演示
+
+
+https://github.com/user-attachments/assets/a7611f3d-c84b-437a-a7c2-f55676891012
+
+
 https://github.com/user-attachments/assets/4e5030a9-b90a-41f2-867f-d2e9afc72088
 
 ## 安装
