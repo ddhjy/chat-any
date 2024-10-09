@@ -11,12 +11,14 @@
 - **追加内容**：支持将新的内容追加到已有的 `context.txt` 文件中，方便持续编辑。
 
 ## 演示
-
-
+### 1. 编辑选中文本
 https://github.com/user-attachments/assets/a7611f3d-c84b-437a-a7c2-f55676891012
 
-
+### 2. 选中文件
 https://github.com/user-attachments/assets/4e5030a9-b90a-41f2-867f-d2e9afc72088
+
+### 3. 追加模式
+https://github.com/user-attachments/assets/7dc16756-3aa9-4bc3-96e2-131fe33f5579
 
 ## 安装
 
