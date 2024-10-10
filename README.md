@@ -116,7 +116,7 @@ chat-any/
 
 ## 联系我们
 
-如果您有任何问题或建议，请通过 [GitHub Issues](https://github.com/yourusername/chat-any/issues) 与我们联系。
+如果您有任何问题或建议，请通过 [GitHub Issues](https://github.com/ddhjy/chat-any/issues) 与我们联系。
 
 ---
 
