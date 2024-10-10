@@ -12,12 +12,15 @@
 
 ## 演示
 ### 1. 编辑选中文本
+将文本复制粘贴到 Cursor 编辑
 https://github.com/user-attachments/assets/a7611f3d-c84b-437a-a7c2-f55676891012
 
 ### 2. 选中文件
+将文件和文件夹中的文本聚合到一个文本
 https://github.com/user-attachments/assets/4e5030a9-b90a-41f2-867f-d2e9afc72088
 
 ### 3. 追加模式
+利用追加模式，将代码和报错信息聚合到一个文本
 https://github.com/user-attachments/assets/7dc16756-3aa9-4bc3-96e2-131fe33f5579
 
 ## 安装
