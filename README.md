@@ -25,6 +25,7 @@ https://github.com/user-attachments/assets/7dc16756-3aa9-4bc3-96e2-131fe33f5579
 ### 前提条件
 
 - 已安装 [Raycast](https://www.raycast.com/)。
+- 已安装 [Cursor](https://cursor.sh/)。
 
 ### 步骤
 
