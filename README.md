@@ -1,5 +1,8 @@
 # Chat Any
 
+> [!NOTE]
+> To be a better Copy-Paste Engineer. 
+
 ## 简介
 
 **Chat Any** 是一款基于 Raycast 的扩展，旨在帮助用户快速收集选中文件、文件夹或文本内容，并将其汇总到一个集中化的文本文件中。
