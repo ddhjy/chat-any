@@ -25,13 +25,32 @@ const BINARY_MEDIA_EXTENSIONS = new Set([
   '.xcodeproj', '.xcworkspace'
 ]);
 
-const IGNORED_ITEMS = new Set([
-  'node_modules', 'dist', 'build', '.git', '.DS_Store',
-  'package-lock.json', 'yarn.lock', 'coverage', 'tmp',
-  'logs', '.vscode', '.idea', '.env', '.env.local',
-  '.cache', 'public', 'assets', 'vendor', 'bower_components',
-  'jspm_packages'
-]);
+const IGNORED_PATTERNS = [
+  // 常规忽略项
+  /^(node_modules|dist|build|coverage|tmp|logs|public|assets|vendor)$/,
+  
+  // 隐藏文件和目录
+  /^\..+/,
+  
+  // 特定文件
+  /^(package-lock\.json|yarn\.lock)$/,
+  
+  // IDE 相关
+  /^\.vscode$/,
+  /^\.idea$/,
+  
+  // 环境文件
+  /^\.env(\.local)?$/,
+  
+  // 缓存目录
+  /^\.cache$/,
+  
+  // 其他常见忽略项
+  /^(bower_components|jspm_packages)$/,
+  
+  // macOS 特定文件
+  /^\.DS_Store$/
+];
 
 // Utility Functions
 
@@ -63,7 +82,7 @@ export function isBinaryOrMediaFile(fileName: string): boolean {
  * @returns True if the item is to be ignored, otherwise false.
  */
 export function isIgnoredItem(itemName: string): boolean {
-  return IGNORED_ITEMS.has(itemName);
+  return IGNORED_PATTERNS.some(pattern => pattern.test(itemName));
 }
 
 /**
