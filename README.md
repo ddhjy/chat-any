@@ -1,5 +1,7 @@
 # Chat Any
 
+**其他语言版本: [中文](README.md), [English](README_en.md).**
+
 > [!NOTE]
 > To be a better Copy-Paste Engineer. 
 
