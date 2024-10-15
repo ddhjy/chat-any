@@ -21,19 +21,20 @@
 
 Copy and paste text into Cursor for editing.
 
-![Demo 1](https://github.com/user-attachments/assets/a7611f3d-c84b-437a-a7c2-f55676891012)
+https://github.com/user-attachments/assets/a7611f3d-c84b-437a-a7c2-f55676891012
+
 
 ### 2. Select Files
 
 Aggregate text from files and folders into one text file.
 
-![Demo 2](https://github.com/user-attachments/assets/4e5030a9-b90a-41f2-867f-d2e9afc72088)
+https://github.com/user-attachments/assets/4e5030a9-b90a-41f2-867f-d2e9afc72088
 
 ### 3. Append Mode
 
 Use append mode to aggregate code and error messages into one text file.
 
-![Demo 3](https://github.com/user-attachments/assets/7dc16756-3aa9-4bc3-96e2-131fe33f5579)
+https://github.com/user-attachments/assets/7dc16756-3aa9-4bc3-96e2-131fe33f5579
 
 ## Installation
 
