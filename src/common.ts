@@ -22,7 +22,7 @@ const BINARY_MEDIA_EXTENSIONS = new Set([
   '.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tiff',
   '.mp3', '.wav', '.flac', '.mp4', '.avi', '.mkv',
   '.exe', '.dll', '.bin', '.iso', '.zip', '.rar',
-  '.xcodeproj', '.xcworkspace'
+  '.xcodeproj', '.xcworkspace', '.tiktoken'
 ]);
 
 const IGNORED_PATTERNS = [
