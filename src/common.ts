@@ -29,29 +29,29 @@ const BINARY_MEDIA_EXTENSIONS = new Set([
 ]);
 
 const IGNORED_PATTERNS = [
-  // 常规忽略项
+  // Regular ignore items
   /^(node_modules|dist|build|coverage|tmp|logs|public|assets|vendor)$/,
   
-  // 隐藏文件和目录
+  // Hidden files and directories
   /^\..+/,
   
-  // 特定文件
+  // Specific files
   /^(package-lock\.json|yarn\.lock)$/,
   
-  // IDE 相关
+  // IDE related
   /^\.vscode$/,
   /^\.idea$/,
   
-  // 环境文件
+  // Environment files
   /^\.env(\.local)?$/,
   
-  // 缓存目录
+  // Cache directories
   /^\.cache$/,
   
-  // 其他常见忽略项
+  // Other common ignore items
   /^(bower_components|jspm_packages)$/,
   
-  // macOS 特定文件
+  // macOS specific files
   /^\.DS_Store$/
 ];
 
