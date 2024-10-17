@@ -133,21 +133,21 @@ export async function readDirectoryContents(dirPath: string, basePath: string = 
       const relativePath = path.join(basePath, itemName);
 
       if (isIgnoredItem(itemName) || isBinaryOrMediaFile(itemName)) {
-        content += `文件：${relativePath} (内容已忽略)\n\n`;
+        content += `File: ${relativePath} (content ignored)\n\n`;
       } else if (item.isDirectory()) {
         content += await readDirectoryContents(itemPath, relativePath);
       } else {
         try {
           const fileContent = await fs.readFile(itemPath, 'utf-8');
-          content += `文件：${relativePath}\n${fileContent}\n\n`;
+          content += `File: ${relativePath}\n${fileContent}\n\n`;
         } catch {
-          content += `文件：${relativePath} (读取失败)\n\n`;
+          content += `File: ${relativePath} (read failed)\n\n`;
         }
       }
     }
   } catch (error) {
-    console.error(`读取目录失败: ${dirPath}`, error);
-    content += `目录：${dirPath} (读取失败)\n\n`;
+    console.error(`Failed to read directory: ${dirPath}`, error);
+    content += `Directory: ${dirPath} (read failed)\n\n`;
   }
 
   return content;
@@ -167,25 +167,25 @@ export async function getContentFromSelectedItems(): Promise<string> {
       const itemPath = item.path;
 
       if (isIgnoredItem(itemName)) {
-        content += `${itemPath} (内容已忽略)\n\n`;
+        content += `${itemPath} (content ignored)\n\n`;
       } else if (await isDirectory(itemPath)) {
         content += await readDirectoryContents(itemPath) + '\n\n';
       } else if (await isFile(itemPath)) {
         if (isBinaryOrMediaFile(itemPath)) {
-          content += `文件：${itemPath} (二进制或媒体文件，内容已忽略)\n\n`;
+          content += `File: ${itemPath} (binary or media file, content ignored)\n\n`;
         } else {
           try {
             const fileContent = await fs.readFile(itemPath, 'utf-8');
-            content += `文件：${itemPath}\n${fileContent}\n\n`;
+            content += `File: ${itemPath}\n${fileContent}\n\n`;
           } catch {
-            content += `文件：${itemPath} (读取失败)\n\n`;
+            content += `File: ${itemPath} (read failed)\n\n`;
           }
         }
       }
     }
   } catch (error) {
-    console.error('获取选中 Finder 项目失败', error);
-    // 返回空字符串，已在外层处理错误
+    console.error('Failed to get selected Finder items', error);
+    // Return empty string, error handled in outer layer
   }
   return content;
 }
@@ -198,7 +198,7 @@ export async function getContentFromSelectedText(): Promise<string> {
   try {
     return await getSelectedText();
   } catch (error) {
-    console.error('获取选中文本失败', error);
+    console.error('Failed to get selected text', error);
     return '';
   }
 }
@@ -212,7 +212,7 @@ export async function getContentFromClipboard(): Promise<string> {
     const clipboardText = await Clipboard.readText();
     return clipboardText || '';
   } catch (error) {
-    console.error('获取剪贴板内容失败', error);
+    console.error('Failed to get clipboard content', error);
     return '';
   }
 }
@@ -228,13 +228,13 @@ export async function openDirectoryAndFile(operation: 'write' | 'append'): Promi
     const lastOpenTimeString = await LocalStorage.getItem(LAST_CURSOR_OPEN_TIME_KEY);
     const lastOpenTime = lastOpenTimeString ? parseInt(lastOpenTimeString as string, 10) : 0;
 
-    // 检查是否超过10分钟
+    // Check if more than 10 minutes have passed
     if (currentTime - lastOpenTime > 600000) {
       operation = 'write';
     }
 
     if (operation === 'write' || currentTime - lastOpenTime > 60000) {
-      // 如果是 'write' 操作或者距离上次打开超过一分钟，则打开 Cursor
+      // If it's a 'write' operation or more than a minute since last open, open Cursor
       await execPromise(`open -a Cursor "${DIRECTORY_PATH}"`);
       await execPromise(`open -a Cursor "${FILE_PATH}"`);
       await LocalStorage.setItem(LAST_CURSOR_OPEN_TIME_KEY, currentTime.toString());
@@ -251,12 +251,12 @@ export async function openDirectoryAndFile(operation: 'write' | 'append'): Promi
         await execPromise(`osascript -e '${appleScript}'`);
       }
     } else {
-      // 如果是 'append' 操作且在一分钟内已经打开过，只显示提示
-      await showHUD("Append 成功");
+      // If it's an 'append' operation and opened within a minute, just show a notification
+      await showHUD("Append successful");
     }
   } catch (error) {
-    console.error('打开目录或文件失败', error);
-    throw new Error('无法打开应用或执行操作');
+    console.error('Failed to open directory or file', error);
+    throw new Error('Unable to open application or perform operation');
   }
 }
 
@@ -268,7 +268,7 @@ export async function showErrorHUD(message: string): Promise<void> {
   try {
     await showHUD(message);
   } catch (error) {
-    console.error('显示 HUD 失败', error);
+    console.error('Failed to show HUD', error);
   }
 }
 
@@ -289,7 +289,7 @@ export async function handleChatOperation(operation: 'write' | 'append'): Promis
     if (!text) {
       text = await getContentFromClipboard();
       if (!text) {
-        await showErrorHUD("没有选中文件、文本，剪贴板也为空");
+        await showErrorHUD("No files or text selected, and clipboard is empty");
         return;
       }
     }
@@ -301,18 +301,18 @@ export async function handleChatOperation(operation: 'write' | 'append'): Promis
         await fs.appendFile(FILE_PATH, `\n\n${text}`, 'utf-8');
       }
     } catch (error) {
-      console.error('写入文件失败', error);
-      await showErrorHUD("无法写入文件");
+      console.error('Failed to write to file', error);
+      await showErrorHUD("Unable to write to file");
       return;
     }
 
     try {
       await openDirectoryAndFile(operation);
     } catch (error) {
-      await showErrorHUD("无法打开应用或执行操作");
+      await showErrorHUD("Unable to open application or perform operation");
     }
   } catch (error) {
-    console.error('操作失败', error);
-    await showErrorHUD("操作失败");
+    console.error('Operation failed', error);
+    await showErrorHUD("Operation failed");
   }
 }
