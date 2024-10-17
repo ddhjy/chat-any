@@ -6,7 +6,8 @@ import {
   getSelectedFinderItems,
   getSelectedText,
   Clipboard,
-  showHUD
+  showHUD,
+  LocalStorage
 } from '@raycast/api';
 import { promisify } from 'util';
 import { exec } from 'child_process';
@@ -16,6 +17,8 @@ const DOCUMENTS_PATH = path.join(homedir(), 'Documents');
 const CHAT_ANY_PATH = path.join(DOCUMENTS_PATH, 'Chat Any');
 const FILE_PATH = path.join(CHAT_ANY_PATH, 'context.txt');
 const DIRECTORY_PATH = CHAT_ANY_PATH;
+
+const LAST_CURSOR_OPEN_TIME_KEY = "lastCursorOpenTime";
 
 // Sets for file filtering
 const BINARY_MEDIA_EXTENSIONS = new Set([
@@ -219,20 +222,37 @@ export async function getContentFromClipboard(): Promise<string> {
  */
 export async function openDirectoryAndFile(operation: 'write' | 'append'): Promise<void> {
   const execPromise = promisify(exec);
+  const currentTime = Date.now();
+
   try {
-    await execPromise(`open -a Cursor "${DIRECTORY_PATH}"`);
-    await execPromise(`open -a Cursor "${FILE_PATH}"`);
-    
-    if (operation === 'append') {
-      const appleScript = `
-        tell application "Cursor"
-          activate
-          tell application "System Events"
-            key code 125 using {command down}
+    const lastOpenTimeString = await LocalStorage.getItem(LAST_CURSOR_OPEN_TIME_KEY);
+    const lastOpenTime = lastOpenTimeString ? parseInt(lastOpenTimeString as string, 10) : 0;
+
+    // 检查是否超过10分钟
+    if (currentTime - lastOpenTime > 600000) {
+      operation = 'write';
+    }
+
+    if (operation === 'write' || currentTime - lastOpenTime > 60000) {
+      // 如果是 'write' 操作或者距离上次打开超过一分钟，则打开 Cursor
+      await execPromise(`open -a Cursor "${DIRECTORY_PATH}"`);
+      await execPromise(`open -a Cursor "${FILE_PATH}"`);
+      await LocalStorage.setItem(LAST_CURSOR_OPEN_TIME_KEY, currentTime.toString());
+
+      if (operation === 'append') {
+        const appleScript = `
+          tell application "Cursor"
+            activate
+            tell application "System Events"
+              key code 125 using {command down}
+            end tell
           end tell
-        end tell
-      `;
-      await execPromise(`osascript -e '${appleScript}'`);
+        `;
+        await execPromise(`osascript -e '${appleScript}'`);
+      }
+    } else {
+      // 如果是 'append' 操作且在一分钟内已经打开过，只显示提示
+      await showHUD("Append 成功");
     }
   } catch (error) {
     console.error('打开目录或文件失败', error);
