@@ -15,7 +15,7 @@ import { exec } from 'child_process';
 // Constants
 const DOCUMENTS_PATH = path.join(homedir(), 'Documents');
 const CHAT_ANY_PATH = path.join(DOCUMENTS_PATH, 'Chat Any');
-const FILE_PATH = path.join(CHAT_ANY_PATH, 'context.txt');
+const FILE_PATH = path.join(CHAT_ANY_PATH, 'context.md');
 const DIRECTORY_PATH = CHAT_ANY_PATH;
 
 const LAST_CURSOR_OPEN_TIME_KEY = "lastCursorOpenTime";
@@ -31,26 +31,26 @@ const BINARY_MEDIA_EXTENSIONS = new Set([
 const IGNORED_PATTERNS = [
   // Regular ignore items
   /^(node_modules|dist|build|coverage|tmp|logs|public|assets|vendor)$/,
-  
+
   // Hidden files and directories
   /^\..+/,
-  
+
   // Specific files
   /^(package-lock\.json|yarn\.lock)$/,
-  
+
   // IDE related
   /^\.vscode$/,
   /^\.idea$/,
-  
+
   // Environment files
   /^\.env(\.local)?$/,
-  
+
   // Cache directories
   /^\.cache$/,
-  
+
   // Other common ignore items
   /^(bower_components|jspm_packages)$/,
-  
+
   // macOS specific files
   /^\.DS_Store$/
 ];

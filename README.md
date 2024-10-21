@@ -3,7 +3,7 @@
 **其他语言版本: [中文](README.md), [English](README_en.md).**
 
 > [!NOTE]
-> To be a better Copy-Paste Engineer. 
+> To be a better Copy-Paste Engineer.
 
 ## 简介
 
@@ -12,21 +12,25 @@
 ## 功能
 
 - **内容收集**：自动读取选中的文本（/剪切版文本）、文件夹或文件内容。
-- **集中编辑**：将收集的内容汇总到 `context.txt` 文件中，存储于用户的 `Documents/Chat Any` 目录下，并用 Cursor 编辑。
-- **追加内容**：支持将新的内容追加到已有的 `context.txt` 文件中，方便持续编辑。
+- **集中编辑**：将收集的内容汇总到 `context.md` 文件中，存储于用户的 `Documents/Chat Any` 目录下，并用 Cursor 编辑。
+- **追加内容**：支持将新的内容追加到已有的 `context.md` 文件中，方便持续编辑。
 
 ## 演示
+
 ### 1. 编辑选中文本
+
 将文本复制粘贴到 Cursor 编辑
 
 https://github.com/user-attachments/assets/a7611f3d-c84b-437a-a7c2-f55676891012
 
 ### 2. 选中文件
+
 将文件和文件夹中的文本聚合到一个文本
 
 https://github.com/user-attachments/assets/4e5030a9-b90a-41f2-867f-d2e9afc72088
 
 ### 3. 追加模式
+
 利用追加模式，将代码和报错信息聚合到一个文本
 
 https://github.com/user-attachments/assets/7dc16756-3aa9-4bc3-96e2-131fe33f5579
@@ -65,17 +69,17 @@ https://github.com/user-attachments/assets/7dc16756-3aa9-4bc3-96e2-131fe33f5579
 
    - 在 Finder 中选中一个或多个文件、文件夹或文本。
    - 使用 Raycast 激活 **Chat Any** 扩展。
-   - 执行 `Chat` 命令，扩展将自动收集选中的内容并**覆盖**到 `context.txt` 文件中。
+   - 执行 `Chat` 命令，扩展将自动收集选中的内容并**覆盖**到 `context.md` 文件中。
 
 2. **追加内容**：
 
    - 在 Finder 中选中新的文件、文件夹或文本。
    - 使用 Raycast 激活 **Chat Any** 扩展。
-   - 执行 `Chat Append` 命令，扩展将自动将选中的内容**追加**到 `context.txt` 文件中。
+   - 执行 `Chat Append` 命令，扩展将自动将选中的内容**追加**到 `context.md` 文件中。
 
 3. **查看汇总内容**：
 
-   - 执行命令后，扩展会自动打开 `Documents/Chat Any` 目录和 `context.txt` 文件，方便即时查看。
+   - 执行命令后，扩展会自动打开 `Documents/Chat Any` 目录和 `context.md` 文件，方便即时查看。
 
 4. **剪贴板操作**：
 

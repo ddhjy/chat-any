@@ -12,8 +12,8 @@
 ## Features
 
 - **Content Collection**: Automatically read selected text (or clipboard text), folders, or file contents.
-- **Centralized Editing**: Aggregate the collected content into a `context.txt` file, stored in the user's `Documents/Chat Any` directory, and edit it with Cursor.
-- **Append Content**: Supports appending new content to the existing `context.txt` file for continuous editing.
+- **Centralized Editing**: Aggregate the collected content into a `context.md` file, stored in the user's `Documents/Chat Any` directory, and edit it with Cursor.
+- **Append Content**: Supports appending new content to the existing `context.md` file for continuous editing.
 
 ## Demo
 
@@ -22,7 +22,6 @@
 Copy and paste text into Cursor for editing.
 
 https://github.com/user-attachments/assets/a7611f3d-c84b-437a-a7c2-f55676891012
-
 
 ### 2. Select Files
 
@@ -70,17 +69,17 @@ https://github.com/user-attachments/assets/7dc16756-3aa9-4bc3-96e2-131fe33f5579
 
    - Select one or more files, folders, or text in Finder.
    - Activate the **Chat Any** extension using Raycast.
-   - Execute the `Chat` command; the extension will automatically collect the selected content and **overwrite** the `context.txt` file.
+   - Execute the `Chat` command; the extension will automatically collect the selected content and **overwrite** the `context.md` file.
 
 2. **Append Content**:
 
    - Select new files, folders, or text in Finder.
    - Activate the **Chat Any** extension using Raycast.
-   - Execute the `Chat Append` command; the extension will automatically **append** the selected content to the `context.txt` file.
+   - Execute the `Chat Append` command; the extension will automatically **append** the selected content to the `context.md` file.
 
 3. **View Aggregated Content**:
 
-   - After executing the command, the extension will automatically open the `Documents/Chat Any` directory and the `context.txt` file for immediate viewing.
+   - After executing the command, the extension will automatically open the `Documents/Chat Any` directory and the `context.md` file for immediate viewing.
 
 4. **Clipboard Operations**:
 
