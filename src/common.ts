@@ -7,7 +7,7 @@ import {
   getSelectedText,
   Clipboard,
   showHUD,
-  LocalStorage
+  LocalStorage,
 } from '@raycast/api';
 import { promisify } from 'util';
 import { exec } from 'child_process';
@@ -18,41 +18,43 @@ const CHAT_ANY_PATH = path.join(DOCUMENTS_PATH, 'Chat Any');
 const FILE_PATH = path.join(CHAT_ANY_PATH, 'context.md');
 const DIRECTORY_PATH = CHAT_ANY_PATH;
 
-const LAST_CURSOR_OPEN_TIME_KEY = "lastCursorOpenTime";
+const LAST_CURSOR_OPEN_TIME_KEY = 'lastCursorOpenTime';
 
 // Sets for file filtering
 const BINARY_MEDIA_EXTENSIONS = new Set([
-  '.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tiff',
-  '.mp3', '.wav', '.flac', '.mp4', '.avi', '.mkv',
-  '.exe', '.dll', '.bin', '.iso', '.zip', '.rar',
-  '.xcodeproj', '.xcworkspace', '.tiktoken'
+  '.jpg',
+  '.jpeg',
+  '.png',
+  '.gif',
+  '.bmp',
+  '.tiff',
+  '.mp3',
+  '.wav',
+  '.flac',
+  '.mp4',
+  '.avi',
+  '.mkv',
+  '.exe',
+  '.dll',
+  '.bin',
+  '.iso',
+  '.zip',
+  '.rar',
+  '.xcodeproj',
+  '.xcworkspace',
+  '.tiktoken',
 ]);
 
 const IGNORED_PATTERNS = [
-  // Regular ignore items
   /^(node_modules|dist|build|coverage|tmp|logs|public|assets|vendor)$/,
-
-  // Hidden files and directories
   /^\..+/,
-
-  // Specific files
   /^(package-lock\.json|yarn\.lock)$/,
-
-  // IDE related
   /^\.vscode$/,
   /^\.idea$/,
-
-  // Environment files
   /^\.env(\.local)?$/,
-
-  // Cache directories
   /^\.cache$/,
-
-  // Other common ignore items
   /^(bower_components|jspm_packages)$/,
-
-  // macOS specific files
-  /^\.DS_Store$/
+  /^\.DS_Store$/,
 ];
 
 // Utility Functions
@@ -85,35 +87,23 @@ export function isBinaryOrMediaFile(fileName: string): boolean {
  * @returns True if the item is to be ignored, otherwise false.
  */
 export function isIgnoredItem(itemName: string): boolean {
-  return IGNORED_PATTERNS.some(pattern => pattern.test(itemName));
+  return IGNORED_PATTERNS.some((pattern) => pattern.test(itemName));
 }
 
 /**
- * Determines if a given path is a directory.
+ * Determines the type of a given path.
  * @param itemPath - The path to check.
- * @returns True if the path is a directory, otherwise false.
+ * @returns 'directory', 'file', or 'other'.
  */
-export async function isDirectory(itemPath: string): Promise<boolean> {
+export async function getFileType(itemPath: string): Promise<'directory' | 'file' | 'other'> {
   try {
     const stats = await fs.lstat(itemPath);
-    return stats.isDirectory();
+    if (stats.isDirectory()) return 'directory';
+    if (stats.isFile()) return 'file';
   } catch {
-    return false;
+    // Ignore errors
   }
-}
-
-/**
- * Determines if a given path is a file.
- * @param itemPath - The path to check.
- * @returns True if the path is a file, otherwise false.
- */
-export async function isFile(itemPath: string): Promise<boolean> {
-  try {
-    const stats = await fs.lstat(itemPath);
-    return stats.isFile();
-  } catch {
-    return false;
-  }
+  return 'other';
 }
 
 /**
@@ -122,35 +112,41 @@ export async function isFile(itemPath: string): Promise<boolean> {
  * @param basePath - The base path for relative paths.
  * @returns A string representing the directory contents.
  */
-export async function readDirectoryContents(dirPath: string, basePath: string = ''): Promise<string> {
-  let content = "";
+export async function readDirectoryContents(
+  dirPath: string,
+  basePath = '',
+): Promise<string> {
+  const contentParts: string[] = [];
   try {
     const items = await fs.readdir(dirPath, { withFileTypes: true });
 
-    for (const item of items) {
+    const readPromises = items.map(async (item) => {
       const itemName = item.name;
       const itemPath = path.join(dirPath, itemName);
       const relativePath = path.join(basePath, itemName);
 
       if (isIgnoredItem(itemName) || isBinaryOrMediaFile(itemName)) {
-        content += `File: ${relativePath} (content ignored)\n\n`;
+        contentParts.push(`File: ${relativePath} (content ignored)\n`);
       } else if (item.isDirectory()) {
-        content += await readDirectoryContents(itemPath, relativePath);
+        const dirContent = await readDirectoryContents(itemPath, relativePath);
+        contentParts.push(dirContent);
       } else {
         try {
           const fileContent = await fs.readFile(itemPath, 'utf-8');
-          content += `File: ${relativePath}\n${fileContent}\n\n`;
+          contentParts.push(`File: ${relativePath}\n${fileContent}\n`);
         } catch {
-          content += `File: ${relativePath} (read failed)\n\n`;
+          contentParts.push(`File: ${relativePath} (read failed)\n`);
         }
       }
-    }
+    });
+
+    await Promise.all(readPromises);
   } catch (error) {
     console.error(`Failed to read directory: ${dirPath}`, error);
-    content += `Directory: ${dirPath} (read failed)\n\n`;
+    contentParts.push(`Directory: ${dirPath} (read failed)\n`);
   }
 
-  return content;
+  return contentParts.join('\n');
 }
 
 /**
@@ -158,36 +154,44 @@ export async function readDirectoryContents(dirPath: string, basePath: string = 
  * @returns A string containing the combined content.
  */
 export async function getContentFromSelectedItems(): Promise<string> {
-  let content = '';
+  const contentParts: string[] = [];
   try {
     const selectedItems = await getSelectedFinderItems();
 
-    for (const item of selectedItems) {
+    const readPromises = selectedItems.map(async (item) => {
       const itemName = path.basename(item.path);
       const itemPath = item.path;
 
       if (isIgnoredItem(itemName)) {
-        content += `${itemPath} (content ignored)\n\n`;
-      } else if (await isDirectory(itemPath)) {
-        content += await readDirectoryContents(itemPath) + '\n\n';
-      } else if (await isFile(itemPath)) {
+        contentParts.push(`${itemPath} (content ignored)\n`);
+        return;
+      }
+
+      const fileType = await getFileType(itemPath);
+
+      if (fileType === 'directory') {
+        const dirContent = await readDirectoryContents(itemPath);
+        contentParts.push(dirContent);
+      } else if (fileType === 'file') {
         if (isBinaryOrMediaFile(itemPath)) {
-          content += `File: ${itemPath} (binary or media file, content ignored)\n\n`;
+          contentParts.push(`File: ${itemPath} (binary or media file, content ignored)\n`);
         } else {
           try {
             const fileContent = await fs.readFile(itemPath, 'utf-8');
-            content += `File: ${itemPath}\n${fileContent}\n\n`;
+            contentParts.push(`File: ${itemPath}\n${fileContent}\n`);
           } catch {
-            content += `File: ${itemPath} (read failed)\n\n`;
+            contentParts.push(`File: ${itemPath} (read failed)\n`);
           }
         }
       }
-    }
+    });
+
+    await Promise.all(readPromises);
   } catch (error) {
     console.error('Failed to get selected Finder items', error);
     // Return empty string, error handled in outer layer
   }
-  return content;
+  return contentParts.join('\n');
 }
 
 /**
@@ -252,7 +256,7 @@ export async function openDirectoryAndFile(operation: 'write' | 'append'): Promi
       }
     } else {
       // If it's an 'append' operation and opened within a minute, just show a notification
-      await showHUD("Append successful");
+      await showHUD('Append successful');
     }
   } catch (error) {
     console.error('Failed to open directory or file', error);
@@ -289,7 +293,7 @@ export async function handleChatOperation(operation: 'write' | 'append'): Promis
     if (!text) {
       text = await getContentFromClipboard();
       if (!text) {
-        await showErrorHUD("No files or text selected, and clipboard is empty");
+        await showErrorHUD('No files or text selected, and clipboard is empty');
         return;
       }
     }
@@ -302,17 +306,17 @@ export async function handleChatOperation(operation: 'write' | 'append'): Promis
       }
     } catch (error) {
       console.error('Failed to write to file', error);
-      await showErrorHUD("Unable to write to file");
+      await showErrorHUD('Unable to write to file');
       return;
     }
 
     try {
       await openDirectoryAndFile(operation);
     } catch (error) {
-      await showErrorHUD("Unable to open application or perform operation");
+      await showErrorHUD('Unable to open application or perform operation');
     }
   } catch (error) {
     console.error('Operation failed', error);
-    await showErrorHUD("Operation failed");
+    await showErrorHUD('Operation failed');
   }
 }
