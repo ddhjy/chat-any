@@ -117,9 +117,31 @@ export async function readDirectoryContents(
   basePath = '',
 ): Promise<string> {
   const contentParts: string[] = [];
+  
+  // Add repository summary header with directory name
+  contentParts.push(`This is a merged representation of: ${dirPath}\n===\n`);
+  
   try {
+    // Add directory structure section
+    contentParts.push('Directory Structure\n===\n');
     const items = await fs.readdir(dirPath, { withFileTypes: true });
+    
+    // Add current directory as root
+    contentParts.push(`${path.basename(dirPath)}/`);
+    
+    // First pass: Build directory structure
+    for (const item of items) {
+      if (!isIgnoredItem(item.name)) {
+        const relativePath = path.join(basePath, item.name);
+        // Add indentation for better hierarchy visualization
+        contentParts.push(`  ${item.isDirectory() ? `${relativePath}/` : relativePath}`);
+      }
+    }
+    
+    // Add files content section
+    contentParts.push('\n===\nFile Contents\n===\n');
 
+    // Second pass: Add file contents
     const readPromises = items.map(async (item) => {
       const itemName = item.name;
       const itemPath = path.join(dirPath, itemName);
@@ -157,7 +179,21 @@ export async function getContentFromSelectedItems(): Promise<string> {
   const contentParts: string[] = [];
   try {
     const selectedItems = await getSelectedFinderItems();
-
+    
+    // Add overall summary header
+    contentParts.push('This is a merged representation of selected items:\n===\n');
+    
+    // Add overall directory structure section
+    contentParts.push('Overall Directory Structure\n===\n');
+    for (const item of selectedItems) {
+      const itemPath = item.path;
+      const fileType = await getFileType(itemPath);
+      contentParts.push(`${fileType === 'directory' ? `${itemPath}/` : itemPath}`);
+    }
+    
+    // Add detailed contents section
+    contentParts.push('\n===\nDetailed Contents\n===\n');
+    
     const readPromises = selectedItems.map(async (item) => {
       const itemName = path.basename(item.path);
       const itemPath = item.path;
@@ -189,7 +225,6 @@ export async function getContentFromSelectedItems(): Promise<string> {
     await Promise.all(readPromises);
   } catch (error) {
     console.error('Failed to get selected Finder items', error);
-    // Return empty string, error handled in outer layer
   }
   return contentParts.join('\n');
 }
