@@ -1,4 +1,3 @@
-// src/common.ts
 import fs from 'fs/promises';
 import path from 'path';
 import { homedir } from 'os';
@@ -117,18 +116,18 @@ export async function readDirectoryContents(
   basePath = '',
 ): Promise<string> {
   const contentParts: string[] = [];
-  
+
   // Add repository summary header with directory name
   contentParts.push(`This is a merged representation of: ${dirPath}\n===\n`);
-  
+
   try {
     // Add directory structure section
     contentParts.push('Directory Structure\n===\n');
     const items = await fs.readdir(dirPath, { withFileTypes: true });
-    
+
     // Add current directory as root
     contentParts.push(`${path.basename(dirPath)}/`);
-    
+
     // First pass: Build directory structure
     for (const item of items) {
       if (!isIgnoredItem(item.name)) {
@@ -137,7 +136,7 @@ export async function readDirectoryContents(
         contentParts.push(`  ${item.isDirectory() ? `${relativePath}/` : relativePath}`);
       }
     }
-    
+
     // Add files content section
     contentParts.push('\n===\nFile Contents\n===\n');
 
@@ -172,6 +171,34 @@ export async function readDirectoryContents(
 }
 
 /**
+ * Recursively builds the directory structure.
+ * @param dirPath - The directory path to read.
+ * @param basePath - The base path for relative paths.
+ * @returns A string representing the directory structure.
+ */
+async function getDirectoryStructure(dirPath: string, basePath = ''): Promise<string> {
+  const items = await fs.readdir(dirPath, { withFileTypes: true });
+  const structureParts: string[] = [];
+
+  for (const item of items) {
+    if (!isIgnoredItem(item.name)) {
+      const relativePath = path.join(basePath, item.name);
+      if (item.isDirectory()) {
+        structureParts.push(`${relativePath}/`);
+        const subDirStructure = await getDirectoryStructure(
+          path.join(dirPath, item.name),
+          relativePath,
+        );
+        structureParts.push(subDirStructure);
+      } else {
+        structureParts.push(relativePath);
+      }
+    }
+  }
+  return structureParts.map((line) => `  ${line}`).join('\n');
+}
+
+/**
  * Retrieves content from the selected Finder items.
  * @returns A string containing the combined content.
  */
@@ -179,21 +206,42 @@ export async function getContentFromSelectedItems(): Promise<string> {
   const contentParts: string[] = [];
   try {
     const selectedItems = await getSelectedFinderItems();
-    
+
+    if (selectedItems.length === 0) {
+      return '';
+    }
+
     // Add overall summary header
     contentParts.push('This is a merged representation of selected items:\n===\n');
-    
+
     // Add overall directory structure section
     contentParts.push('Overall Directory Structure\n===\n');
+    const structureParts: string[] = [];
+
     for (const item of selectedItems) {
       const itemPath = item.path;
+      const itemName = path.basename(itemPath);
       const fileType = await getFileType(itemPath);
-      contentParts.push(`${fileType === 'directory' ? `${itemPath}/` : itemPath}`);
+      const relativePath = itemName;
+
+      if (isIgnoredItem(itemName)) {
+        continue;
+      }
+
+      if (fileType === 'directory') {
+        structureParts.push(`${relativePath}/`);
+        const dirStructure = await getDirectoryStructure(itemPath, relativePath);
+        structureParts.push(dirStructure);
+      } else if (fileType === 'file') {
+        structureParts.push(relativePath);
+      }
     }
-    
+
+    contentParts.push(structureParts.join('\n'));
+
     // Add detailed contents section
     contentParts.push('\n===\nDetailed Contents\n===\n');
-    
+
     const readPromises = selectedItems.map(async (item) => {
       const itemName = path.basename(item.path);
       const itemPath = item.path;
@@ -206,17 +254,17 @@ export async function getContentFromSelectedItems(): Promise<string> {
       const fileType = await getFileType(itemPath);
 
       if (fileType === 'directory') {
-        const dirContent = await readDirectoryContents(itemPath);
+        const dirContent = await readDirectoryContents(itemPath, itemName);
         contentParts.push(dirContent);
       } else if (fileType === 'file') {
         if (isBinaryOrMediaFile(itemPath)) {
-          contentParts.push(`File: ${itemPath} (binary or media file, content ignored)\n`);
+          contentParts.push(`File: ${itemName} (binary or media file, content ignored)\n`);
         } else {
           try {
             const fileContent = await fs.readFile(itemPath, 'utf-8');
-            contentParts.push(`File: ${itemPath}\n${fileContent}\n`);
+            contentParts.push(`File: ${itemName}\n${fileContent}\n`);
           } catch {
-            contentParts.push(`File: ${itemPath} (read failed)\n`);
+            contentParts.push(`File: ${itemName} (read failed)\n`);
           }
         }
       }
