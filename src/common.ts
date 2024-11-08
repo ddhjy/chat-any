@@ -198,7 +198,11 @@ async function getDirectoryStructure(dirPath: string, basePath = ''): Promise<st
   return structureParts.map((line) => `  ${line}`).join('\n');
 }
 
-// 新增的辅助函数，用于统计文件数量
+/**
+ * Counts the number of files in a directory recursively.
+ * @param itemPath - The path of the directory to count files in.
+ * @returns The number of files in the directory.
+ */
 async function countFiles(itemPath: string): Promise<number> {
   let count = 0;
   const fileType = await getFileType(itemPath);
