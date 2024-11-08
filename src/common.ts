@@ -198,6 +198,26 @@ async function getDirectoryStructure(dirPath: string, basePath = ''): Promise<st
   return structureParts.map((line) => `  ${line}`).join('\n');
 }
 
+// 新增的辅助函数，用于统计文件数量
+async function countFiles(itemPath: string): Promise<number> {
+  let count = 0;
+  const fileType = await getFileType(itemPath);
+  
+  if (fileType === 'directory') {
+    const items = await fs.readdir(itemPath, { withFileTypes: true });
+    for (const item of items) {
+      const subPath = path.join(itemPath, item.name);
+      if (!isIgnoredItem(item.name)) {
+        count += await countFiles(subPath);
+      }
+    }
+  } else if (fileType === 'file' && !isBinaryOrMediaFile(itemPath)) {
+    count = 1;
+  }
+  
+  return count;
+}
+
 /**
  * Retrieves content from the selected Finder items.
  * @returns A string containing the combined content.
@@ -210,6 +230,17 @@ export async function getContentFromSelectedItems(): Promise<string> {
     if (selectedItems.length === 0) {
       return '';
     }
+
+    // 统计文件总数
+    let totalFiles = 0;
+    for (const item of selectedItems) {
+      if (!isIgnoredItem(path.basename(item.path))) {
+        totalFiles += await countFiles(item.path);
+      }
+    }
+    
+    // 在最前面添加文件统计信息
+    contentParts.push(`Total Files: ${totalFiles}\n`);
 
     // Add overall summary header
     contentParts.push('This is a merged representation of selected items:\n===\n');
