@@ -7,7 +7,7 @@
 
 ## Introduction
 
-**Chat Any** is a Raycast extension designed to help users quickly collect selected files, folders, or text content and aggregate them into a centralized text file.
+**Chat Any** is a Raycast extension, you can compress the selected text/file/folder into a file and edit it directly with Cursor.
 
 ## Features
 
