@@ -26,7 +26,7 @@
       "title": "Editor Application",
       "description": "Choose which application to use for opening files",
       "type": "appPicker",
-      "required": false,
+      "required": true,
       "default": "Cursor"
     }
   ],
