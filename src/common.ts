@@ -7,6 +7,7 @@ import {
   Clipboard,
   showHUD,
   LocalStorage,
+  getPreferenceValues,
 } from '@raycast/api';
 import { promisify } from 'util';
 import { exec } from 'child_process';
@@ -206,7 +207,7 @@ async function getDirectoryStructure(dirPath: string, basePath = ''): Promise<st
 async function countFiles(itemPath: string): Promise<number> {
   let count = 0;
   const fileType = await getFileType(itemPath);
-  
+
   if (fileType === 'directory') {
     const items = await fs.readdir(itemPath, { withFileTypes: true });
     for (const item of items) {
@@ -218,7 +219,7 @@ async function countFiles(itemPath: string): Promise<number> {
   } else if (fileType === 'file' && !isBinaryOrMediaFile(itemPath)) {
     count = 1;
   }
-  
+
   return count;
 }
 
@@ -229,7 +230,7 @@ async function countFiles(itemPath: string): Promise<number> {
 export async function getContentFromSelectedItems(): Promise<string> {
   const contentParts: string[] = [];
   try {
-    const selectedItems = await getSelectedFinderItems();
+    const selectedItems = await getSelectedFinderItems().catch(() => []);
 
     if (selectedItems.length === 0) {
       return '';
@@ -242,7 +243,7 @@ export async function getContentFromSelectedItems(): Promise<string> {
         totalFiles += await countFiles(item.path);
       }
     }
-    
+
     // 在最前面添加文件统计信息
     contentParts.push(`Total Files: ${totalFiles}\n`);
 
@@ -339,12 +340,18 @@ export async function getContentFromClipboard(): Promise<string> {
   }
 }
 
+interface Preferences {
+  customEditor?: { name: string; path: string };
+}
+
 /**
  * Opens the specified directory and file, then simulates a key press.
  */
 export async function openDirectoryAndFile(operation: 'write' | 'append'): Promise<void> {
   const execPromise = promisify(exec);
   const currentTime = Date.now();
+  const preferences = getPreferenceValues<Preferences>();
+  const editorApp = preferences.customEditor?.name || 'Cursor';
 
   try {
     const lastOpenTimeString = await LocalStorage.getItem(LAST_CURSOR_OPEN_TIME_KEY);
@@ -356,12 +363,12 @@ export async function openDirectoryAndFile(operation: 'write' | 'append'): Promi
     }
 
     if (operation === 'write' || currentTime - lastOpenTime > 60000) {
-      // If it's a 'write' operation or more than a minute since last open, open Cursor
-      await execPromise(`open -a Cursor "${DIRECTORY_PATH}"`);
-      await execPromise(`open -a Cursor "${FILE_PATH}"`);
+      // If it's a 'write' operation or more than a minute since last open, open the editor
+      await execPromise(`open -a "${editorApp}" "${DIRECTORY_PATH}"`);
+      await execPromise(`open -a "${editorApp}" "${FILE_PATH}"`);
       await LocalStorage.setItem(LAST_CURSOR_OPEN_TIME_KEY, currentTime.toString());
 
-      if (operation === 'append') {
+      if (operation === 'append' && editorApp === 'Cursor') {
         const appleScript = `
           tell application "Cursor"
             activate

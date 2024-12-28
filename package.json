@@ -20,6 +20,16 @@
       "mode": "no-view"
     }
   ],
+  "preferences": [
+    {
+      "name": "customEditor",
+      "title": "Editor Application",
+      "description": "Choose which application to use for opening files",
+      "type": "appPicker",
+      "required": false,
+      "default": "Cursor"
+    }
+  ],
   "dependencies": {
     "@raycast/api": "^1.82.5",
     "@raycast/utils": "^1.16.3"
