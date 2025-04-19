@@ -7,6 +7,8 @@
 
 ## Introduction
 
+In daily development, I often need to copy and paste various texts into Cursor for editing/Q&A. To simplify this process, **Chat Any** was created.
+
 **Chat Any** is a Raycast extension, you can compress the selected text/file/folder into a file and edit it directly with Cursor.
 
 ## Features
