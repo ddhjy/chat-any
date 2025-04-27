@@ -1,3 +1,10 @@
+/**
+ * @file common.ts
+ * @description Provides common utility functions and core logic for the Chat Any Raycast extension.
+ * This includes functions for file system operations, content retrieval (Finder, selection, clipboard),
+ * text processing, and interacting with the specified editor application.
+ */
+
 import fs from 'fs/promises';
 import path from 'path';
 import { homedir } from 'os';
@@ -13,14 +20,15 @@ import { promisify } from 'util';
 import { exec } from 'child_process';
 
 // Constants
-const DOCUMENTS_PATH = path.join(homedir(), 'Documents');
-const CHAT_ANY_PATH = path.join(DOCUMENTS_PATH, 'Chat Any');
-const FILE_PATH = path.join(CHAT_ANY_PATH, 'context.md');
-const DIRECTORY_PATH = CHAT_ANY_PATH;
+const DOCUMENTS_PATH = path.join(homedir(), 'Documents'); // Path to the user's Documents directory.
+const CHAT_ANY_PATH = path.join(DOCUMENTS_PATH, 'Chat Any'); // Directory to store the context file.
+const FILE_PATH = path.join(CHAT_ANY_PATH, 'context.md'); // Path to the context markdown file.
+const DIRECTORY_PATH = CHAT_ANY_PATH; // Path to the directory containing the context file.
 
-const LAST_CURSOR_OPEN_TIME_KEY = 'lastCursorOpenTime';
+const LAST_CURSOR_OPEN_TIME_KEY = 'lastCursorOpenTime'; // LocalStorage key for tracking the last editor open time.
 
 // Sets for file filtering
+/** Set of file extensions considered as binary or media files, which should be ignored for content reading. */
 const BINARY_MEDIA_EXTENSIONS = new Set([
   '.jpg',
   '.jpeg',
@@ -45,6 +53,7 @@ const BINARY_MEDIA_EXTENSIONS = new Set([
   '.tiktoken',
 ]);
 
+/** Array of regex patterns for file/directory names that should be ignored during processing. */
 const IGNORED_PATTERNS = [
   /^(node_modules|dist|build|coverage|tmp|logs|public|assets|vendor)$/,
   /^\..+/,
@@ -107,10 +116,12 @@ export async function getFileType(itemPath: string): Promise<'directory' | 'file
 }
 
 /**
- * Recursively reads the contents of a directory.
+ * Recursively reads the contents of a directory, formatting the output.
+ * It includes a header, directory structure, and the content of each non-ignored file.
+ * Uses '===' separators for different sections.
  * @param dirPath - The directory path to read.
- * @param basePath - The base path for relative paths.
- * @returns A string representing the directory contents.
+ * @param basePath - The base path to prepend for relative paths within the output. Defaults to ''.
+ * @returns A promise that resolves to a string representing the formatted directory contents.
  */
 export async function readDirectoryContents(
   dirPath: string,
@@ -172,10 +183,10 @@ export async function readDirectoryContents(
 }
 
 /**
- * Recursively builds the directory structure.
- * @param dirPath - The directory path to read.
- * @param basePath - The base path for relative paths.
- * @returns A string representing the directory structure.
+ * Recursively builds a string representation of the directory structure, ignoring specified items.
+ * @param dirPath - The directory path to generate the structure for.
+ * @param basePath - The base path to prepend for relative paths. Defaults to ''.
+ * @returns A promise that resolves to a string representing the directory structure, with indentation.
  */
 async function getDirectoryStructure(dirPath: string, basePath = ''): Promise<string> {
   const items = await fs.readdir(dirPath, { withFileTypes: true });
@@ -200,9 +211,9 @@ async function getDirectoryStructure(dirPath: string, basePath = ''): Promise<st
 }
 
 /**
- * Counts the number of files in a directory recursively.
- * @param itemPath - The path of the directory to count files in.
- * @returns The number of files in the directory.
+ * Recursively counts the number of non-ignored, non-binary files within a directory or returns 1 if it's a single valid file.
+ * @param itemPath - The path of the directory or file to count files in.
+ * @returns A promise that resolves to the total count of relevant files.
  */
 async function countFiles(itemPath: string): Promise<number> {
   let count = 0;
@@ -224,8 +235,10 @@ async function countFiles(itemPath: string): Promise<number> {
 }
 
 /**
- * Retrieves content from the selected Finder items.
- * @returns A string containing the combined content.
+ * Retrieves and formats content from the items currently selected in Finder.
+ * Handles both files and directories, ignoring specified patterns and binary files.
+ * The output includes a file count, overall structure, and detailed contents.
+ * @returns A promise that resolves to a string containing the combined and formatted content, or an empty string if no items are selected or an error occurs.
  */
 export async function getContentFromSelectedItems(): Promise<string> {
   const contentParts: string[] = [];
@@ -236,7 +249,7 @@ export async function getContentFromSelectedItems(): Promise<string> {
       return '';
     }
 
-    // 统计文件总数
+    // Count total files
     let totalFiles = 0;
     for (const item of selectedItems) {
       if (!isIgnoredItem(path.basename(item.path))) {
@@ -244,7 +257,7 @@ export async function getContentFromSelectedItems(): Promise<string> {
       }
     }
 
-    // 在最前面添加文件统计信息
+    // Add file count information at the beginning
     contentParts.push(`Total Files: ${totalFiles}\n`);
 
     // Add overall summary header
@@ -340,12 +353,26 @@ export async function getContentFromClipboard(): Promise<string> {
   }
 }
 
+/**
+ * Defines the structure for user preferences retrieved from Raycast settings.
+ */
 interface Preferences {
+  /** The selected editor application preference. */
   customEditor?: { name: string; path: string };
 }
 
 /**
- * Opens the specified directory and file, then simulates a key press.
+ * Opens the target directory and context file (`context.md`) in the user-specified editor application.
+ * Implements logic to avoid reopening the editor too frequently for 'append' operations.
+ * - If the operation is 'write', it always opens the editor.
+ * - If the operation is 'append':
+ *   - If the editor hasn't been opened in the last 10 minutes, it behaves like 'write' (resetting context).
+ *   - If the editor was opened more than 1 minute ago, it reopens the editor and file.
+ *   - If the editor was opened within the last minute, it only shows a HUD notification.
+ * - If the editor is 'Cursor' and it's an 'append' operation that reopens the editor, it attempts
+ *   to scroll to the bottom using AppleScript.
+ * @param operation - The type of operation: 'write' (overwrite context) or 'append' (add to context).
+ * @throws Will throw an error if opening the application or executing AppleScript fails.
  */
 export async function openDirectoryAndFile(operation: 'write' | 'append'): Promise<void> {
   const execPromise = promisify(exec);
@@ -403,8 +430,11 @@ export async function showErrorHUD(message: string): Promise<void> {
 // Main Operation Function
 
 /**
- * Handles chat operations by writing or appending content.
- * @param operation - The type of operation: 'write' or 'append'.
+ * Main handler function for both 'Chat' and 'Chat Append' commands.
+ * It ensures the target directory exists, retrieves content (prioritizing Finder selection,
+ * then selected text, then clipboard), writes or appends the content to the `context.md` file,
+ * and finally opens the file/directory in the configured editor.
+ * @param operation - The operation mode: 'write' to overwrite the file, or 'append' to add to it.
  */
 export async function handleChatOperation(operation: 'write' | 'append'): Promise<void> {
   try {
