@@ -363,9 +363,8 @@ export async function openDirectoryAndFile(operation: 'write' | 'append'): Promi
     }
 
     if (operation === 'write' || currentTime - lastOpenTime > 60000) {
-      // If it's a 'write' operation or more than a minute since last open, open the editor
-      await execPromise(`open -a "${editorApp}" "${DIRECTORY_PATH}"`);
-      await execPromise(`open -a "${editorApp}" "${FILE_PATH}"`);
+      // If it's a 'write' operation or more than a minute since last open, open the editor;
+      await execPromise(`open -a "${editorApp}" "${DIRECTORY_PATH}" -g "${FILE_PATH}"`);
       await LocalStorage.setItem(LAST_CURSOR_OPEN_TIME_KEY, currentTime.toString());
 
       if (operation === 'append' && editorApp === 'Cursor') {
