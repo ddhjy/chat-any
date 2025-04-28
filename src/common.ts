@@ -15,6 +15,8 @@ import {
   showHUD,
   LocalStorage,
   getPreferenceValues,
+  showToast,
+  Toast,
 } from '@raycast/api';
 import { promisify } from 'util';
 import { exec } from 'child_process';
@@ -158,8 +160,10 @@ export async function readDirectoryContents(
       const itemPath = path.join(dirPath, itemName);
       const relativePath = path.join(basePath, itemName);
 
-      if (isIgnoredItem(itemName) || isBinaryOrMediaFile(itemName)) {
+      if (isIgnoredItem(itemName)) {
         contentParts.push(`File: ${relativePath} (content ignored)\n`);
+      } else if (isBinaryOrMediaFile(itemName)) {
+        contentParts.push(`File: ${relativePath} (binary or media file, content ignored)\n`);
       } else if (item.isDirectory()) {
         const dirContent = await readDirectoryContents(itemPath, relativePath);
         contentParts.push(dirContent);
@@ -167,7 +171,8 @@ export async function readDirectoryContents(
         try {
           const fileContent = await fs.readFile(itemPath, 'utf-8');
           contentParts.push(`File: ${relativePath}\n${fileContent}\n`);
-        } catch {
+        } catch (error) {
+          console.error(`Failed to read file in dir ${dirPath}: ${relativePath}`);
           contentParts.push(`File: ${relativePath} (read failed)\n`);
         }
       }
@@ -207,6 +212,7 @@ async function getDirectoryStructure(dirPath: string, basePath = ''): Promise<st
       }
     }
   }
+
   return structureParts.map((line) => `  ${line}`).join('\n');
 }
 
@@ -242,6 +248,8 @@ async function countFiles(itemPath: string): Promise<number> {
  */
 export async function getContentFromSelectedItems(): Promise<string> {
   const contentParts: string[] = [];
+  let totalFiles = 0;
+
   try {
     const selectedItems = await getSelectedFinderItems().catch(() => []);
 
@@ -250,12 +258,14 @@ export async function getContentFromSelectedItems(): Promise<string> {
     }
 
     // Count total files
-    let totalFiles = 0;
-    for (const item of selectedItems) {
+    const countPromises = selectedItems.map(item => {
       if (!isIgnoredItem(path.basename(item.path))) {
-        totalFiles += await countFiles(item.path);
+        return countFiles(item.path);
       }
-    }
+      return Promise.resolve(0);
+    });
+    const fileCounts = await Promise.all(countPromises);
+    totalFiles = fileCounts.reduce((sum, count) => sum + count, 0);
 
     // Add file count information at the beginning
     contentParts.push(`Total Files: ${totalFiles}\n`);
@@ -312,7 +322,8 @@ export async function getContentFromSelectedItems(): Promise<string> {
           try {
             const fileContent = await fs.readFile(itemPath, 'utf-8');
             contentParts.push(`File: ${itemName}\n${fileContent}\n`);
-          } catch {
+          } catch (error) {
+            console.error(`Failed to read file: ${itemPath}`, error);
             contentParts.push(`File: ${itemName} (read failed)\n`);
           }
         }
@@ -323,18 +334,30 @@ export async function getContentFromSelectedItems(): Promise<string> {
   } catch (error) {
     console.error('Failed to get selected Finder items', error);
   }
+
   return contentParts.join('\n');
 }
 
 /**
- * Retrieves content from the selected text.
- * @returns A string containing the selected text.
+ * Retrieves content from the selected text with timeout.
+ * @param timeout - Timeout in milliseconds
+ * @returns A string containing the selected text, or empty string if timeout or error.
  */
-export async function getContentFromSelectedText(): Promise<string> {
+export async function getContentFromSelectedTextWithTimeout(timeout = 500): Promise<string> {
   try {
-    return await getSelectedText();
+    // 创建一个带超时的Promise
+    const textPromise = getSelectedText();
+    const timeoutPromise = new Promise<string>((_, reject) => {
+      setTimeout(() => reject(new Error("获取选中文本超时")), timeout);
+    });
+
+    // 使用 Promise.race 竞争，谁先完成就返回谁的结果
+    const text = await Promise.race([textPromise, timeoutPromise]);
+    return text;
   } catch (error) {
-    console.error('Failed to get selected text', error);
+    if (!(error instanceof Error && error.message === "获取选中文本超时")) {
+      console.error('Failed to get selected text', error);
+    }
     return '';
   }
 }
@@ -391,7 +414,7 @@ export async function openDirectoryAndFile(operation: 'write' | 'append'): Promi
 
     if (operation === 'write' || currentTime - lastOpenTime > 60000) {
       // If it's a 'write' operation or more than a minute since last open, open the editor;
-      await execPromise(`open -a "${editorApp}" "${DIRECTORY_PATH}" -g "${FILE_PATH}"`);
+      await execPromise(`open -a "${editorApp}" "${DIRECTORY_PATH}" "${FILE_PATH}"`);
       await LocalStorage.setItem(LAST_CURSOR_OPEN_TIME_KEY, currentTime.toString());
 
       if (operation === 'append' && editorApp === 'Cursor') {
@@ -437,40 +460,153 @@ export async function showErrorHUD(message: string): Promise<void> {
  * @param operation - The operation mode: 'write' to overwrite the file, or 'append' to add to it.
  */
 export async function handleChatOperation(operation: 'write' | 'append'): Promise<void> {
+  const toast = await showToast({
+    style: Toast.Style.Animated,
+    title: "处理中...",
+  });
+
   try {
+    // 1. 确保目录存在
     await ensureDirectoryExists(CHAT_ANY_PATH);
 
-    let text = await getContentFromSelectedItems();
-    if (!text) {
-      text = await getContentFromSelectedText();
-    }
-    if (!text) {
-      text = await getContentFromClipboard();
-      if (!text) {
-        await showErrorHUD('No files or text selected, and clipboard is empty');
-        return;
+    // 2. 先启动打开编辑器的过程（如果是append且最近打开过，则不重新打开）
+    let shouldOpenEditor = true;
+    if (operation === 'append') {
+      const lastOpenTimeString = await LocalStorage.getItem(LAST_CURSOR_OPEN_TIME_KEY);
+      const lastOpenTime = lastOpenTimeString ? parseInt(lastOpenTimeString as string, 10) : 0;
+      const currentTime = Date.now();
+
+      // 如果在过去1分钟内打开过，则不重新打开
+      if (currentTime - lastOpenTime <= 60000) {
+        shouldOpenEditor = false;
       }
     }
 
+    // 异步启动编辑器打开操作
+    let editorPromise: Promise<void> | null = null;
+    if (shouldOpenEditor) {
+      // 立即创建一个空文件（如果不存在），以便编辑器有内容可打开
+      if (operation === 'write') {
+        try {
+          // 检查文件是否存在，不存在则创建
+          await fs.access(FILE_PATH).catch(() => fs.writeFile(FILE_PATH, '', 'utf-8'));
+        } catch (error) {
+          console.error('Failed to create initial file:', error);
+        }
+      }
+
+      // 异步打开编辑器，不等待完成
+      editorPromise = (async () => {
+        try {
+          await openDirectoryAndFile(operation);
+          toast.title = "编辑器已打开";
+          toast.message = "正在处理内容...";
+        } catch (error) {
+          console.error('Failed to open editor:', error);
+        }
+      })();
+    }
+
+    // 3. 同时开始获取内容
+    let text = '';
+    let source = 'unknown'; // 记录内容来源
+
+    // 3.1 先检查 Finder 选中项
+    text = await getContentFromSelectedItems();
+    if (text) {
+      source = 'Finder Items';
+    } else {
+      // 3.2 然后检查选中文本（使用带超时的版本）
+      text = await getContentFromSelectedTextWithTimeout(500); // 超时时间设为500ms
+
+      if (text) {
+        source = 'Selected Text';
+      } else {
+        // 3.3 最后才检查剪贴板
+        text = await getContentFromClipboard();
+
+        if (text) {
+          source = 'Clipboard';
+        } else {
+          await showErrorHUD('没有选中文件或文本，剪贴板也为空');
+          toast.style = Toast.Style.Failure;
+          toast.title = "失败";
+          toast.message = "未找到内容。";
+
+          // 如果已经启动了编辑器打开过程，等待它完成
+          if (editorPromise) {
+            await editorPromise.catch(() => { });
+          }
+
+          return;
+        }
+      }
+    }
+
+    // 4. 内容写入文件
     try {
       if (operation === 'write') {
         await fs.writeFile(FILE_PATH, text, 'utf-8');
       } else {
-        await fs.appendFile(FILE_PATH, `\n\n\n${text}`, 'utf-8');
+        // 添加换行符以分隔追加的内容
+        await fs.appendFile(FILE_PATH, `\n\n===\n\n${text}`, 'utf-8');
       }
+
+      // 如果是append且已打开编辑器，尝试滚动到底部
+      if (operation === 'append' && shouldOpenEditor) {
+        try {
+          const preferences = getPreferenceValues<Preferences>();
+          const editorApp = preferences.customEditor?.name || 'Cursor';
+
+          if (editorApp === 'Cursor') {
+            const execPromise = promisify(exec);
+            const appleScript = `
+              tell application "Cursor"
+                activate
+                tell application "System Events"
+                  key code 125 using {command down}
+                end tell
+              end tell
+            `;
+            await execPromise(`osascript -e '${appleScript}'`);
+          }
+        } catch (error) {
+          console.error('Failed to scroll editor:', error);
+        }
+      }
+
+      // 5. 等待编辑器打开完成（如果还在进行中）
+      if (editorPromise) {
+        await editorPromise.catch(error => {
+          console.error('Editor opening process failed:', error);
+        });
+      } else if (!shouldOpenEditor && operation === 'append') {
+        // 如果没有重新打开编辑器但执行了追加操作，显示通知
+        await showHUD('内容已追加');
+      }
+
+      toast.style = Toast.Style.Success;
+      toast.title = "成功";
+      toast.message = `已处理来自${source}的内容。`;
     } catch (error) {
       console.error('Failed to write to file', error);
-      await showErrorHUD('Unable to write to file');
-      return;
-    }
+      await showErrorHUD('无法写入文件');
+      toast.style = Toast.Style.Failure;
+      toast.title = "失败";
+      toast.message = "无法写入文件。";
 
-    try {
-      await openDirectoryAndFile(operation);
-    } catch (error) {
-      await showErrorHUD('Unable to open application or perform operation');
+      // 如果已经启动了编辑器打开过程，等待它完成
+      if (editorPromise) {
+        await editorPromise.catch(() => { });
+      }
+
+      return;
     }
   } catch (error) {
     console.error('Operation failed', error);
-    await showErrorHUD('Operation failed');
+    await showErrorHUD('操作失败');
+    toast.style = Toast.Style.Failure;
+    toast.title = "操作失败";
+    toast.message = error instanceof Error ? error.message : String(error);
   }
 }
