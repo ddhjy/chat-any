@@ -102,6 +102,24 @@ export function isIgnoredItem(itemName: string): boolean {
 }
 
 /**
+ * Copies a file to the Chat Any directory.
+ * @param sourceFilePath - The path of the file to copy.
+ * @returns A promise that resolves to the destination file path.
+ */
+export async function copyFileToTarget(sourceFilePath: string): Promise<string> {
+  const fileName = path.basename(sourceFilePath);
+  const destFilePath = path.join(CHAT_ANY_PATH, fileName);
+
+  try {
+    await fs.copyFile(sourceFilePath, destFilePath);
+    return destFilePath;
+  } catch (error) {
+    console.error(`Failed to copy file: ${sourceFilePath}`, error);
+    throw error;
+  }
+}
+
+/**
  * Determines the type of a given path.
  * @param itemPath - The path to check.
  * @returns 'directory', 'file', or 'other'.
@@ -163,7 +181,13 @@ export async function readDirectoryContents(
       if (isIgnoredItem(itemName)) {
         contentParts.push(`File: ${relativePath} (content ignored)\n`);
       } else if (isBinaryOrMediaFile(itemName)) {
-        contentParts.push(`File: ${relativePath} (binary or media file, content ignored)\n`);
+        try {
+          const destPath = await copyFileToTarget(itemPath);
+          contentParts.push(`File: ${relativePath} (copied to ${destPath})\n`);
+        } catch (error) {
+          console.error(`Failed to copy binary file: ${relativePath}`);
+          contentParts.push(`File: ${relativePath} (binary file, copy failed)\n`);
+        }
       } else if (item.isDirectory()) {
         const dirContent = await readDirectoryContents(itemPath, relativePath);
         contentParts.push(dirContent);
@@ -317,7 +341,13 @@ export async function getContentFromSelectedItems(): Promise<string> {
         contentParts.push(dirContent);
       } else if (fileType === 'file') {
         if (isBinaryOrMediaFile(itemPath)) {
-          contentParts.push(`File: ${itemName} (binary or media file, content ignored)\n`);
+          try {
+            const destPath = await copyFileToTarget(itemPath);
+            contentParts.push(`File: ${itemName} (copied to ${destPath})\n`);
+          } catch (error) {
+            console.error(`Failed to copy binary file: ${itemPath}`, error);
+            contentParts.push(`File: ${itemName} (binary file, copy failed)\n`);
+          }
         } else {
           try {
             const fileContent = await fs.readFile(itemPath, 'utf-8');
