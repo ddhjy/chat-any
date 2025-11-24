@@ -480,6 +480,24 @@ export async function showErrorHUD(message: string): Promise<void> {
   }
 }
 
+/**
+ * Opens the Chat Any directory in the user-specified editor application.
+ */
+export async function openChatAnyDirectoryInEditor(): Promise<void> {
+  const execPromise = promisify(exec);
+  const preferences = getPreferenceValues<Preferences>();
+  const editorApp = preferences.customEditor?.name || 'Cursor';
+
+  try {
+    await ensureDirectoryExists(DIRECTORY_PATH);
+    await execPromise(`open -a "${editorApp}" "${DIRECTORY_PATH}"`);
+  } catch (error) {
+    console.error('Failed to open Chat Any directory', error);
+    await showErrorHUD('无法在编辑器中打开 Chat Any 目录');
+    throw error;
+  }
+}
+
 // Main Operation Function
 
 /**
