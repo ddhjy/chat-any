@@ -46,24 +46,12 @@ https://github.com/user-attachments/assets/7dc16756-3aa9-4bc3-96e2-131fe33f5579
 
 ### 步骤
 
-1. **克隆项目**：
-
-   ```bash
-   git clone git@github.com:ddhjy/chat-any.git
-   cd chat-any
-   ```
-
-2. **安装依赖**：
-
-   ```bash
-   npm install
-   ```
-
-3. **开发模式**：
-
-   ```bash
-   npm run dev
-   ```
+```bash
+git clone git@github.com:ddhjy/chat-any.git
+cd chat-any
+npm install
+npm run dev
+```
 
 ## 使用方法
 

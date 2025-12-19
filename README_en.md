@@ -46,24 +46,12 @@ https://github.com/user-attachments/assets/7dc16756-3aa9-4bc3-96e2-131fe33f5579
 
 ### Steps
 
-1. **Clone the project**:
-
-   ```bash
-   git clone git@github.com:ddhjy/chat-any.git
-   cd chat-any
-   ```
-
-2. **Install dependencies**:
-
-   ```bash
-   npm install
-   ```
-
-3. **Development mode**:
-
-   ```bash
-   npm run dev
-   ```
+```bash
+git clone git@github.com:ddhjy/chat-any.git
+cd chat-any
+npm install
+npm run dev
+```
 
 ## Usage
 
