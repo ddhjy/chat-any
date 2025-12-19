@@ -49,7 +49,7 @@ https://github.com/user-attachments/assets/7dc16756-3aa9-4bc3-96e2-131fe33f5579
 1. **Clone the project**:
 
    ```bash
-   git clone https://github.com/yourusername/chat-any.git
+   git clone git@github.com:ddhjy/chat-any.git
    cd chat-any
    ```
 
