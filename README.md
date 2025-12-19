@@ -15,7 +15,7 @@
 
 - **内容收集**：自动读取选中的文本（/剪切版文本）、文件夹或文件内容。
 - **集中编辑**：将收集的内容汇总到 `context.md` 文件中，存储于用户的 `Documents/Chat Any` 目录下，并用 Cursor 编辑。
-- **追加内容**：支持将新的内容追加到已有的 `context.md` 文件中，方便持续编辑。
+- **软链接**：将选中的文件/文件夹以软链接形式添加到 `Chat Any` 目录，方便在 Cursor 中直接编辑原文件。
 
 ## 演示
 
@@ -31,11 +31,6 @@ https://github.com/user-attachments/assets/a7611f3d-c84b-437a-a7c2-f55676891012
 
 https://github.com/user-attachments/assets/4e5030a9-b90a-41f2-867f-d2e9afc72088
 
-### 3. 追加模式
-
-利用追加模式，将代码和报错信息聚合到一个文本
-
-https://github.com/user-attachments/assets/7dc16756-3aa9-4bc3-96e2-131fe33f5579
 
 ## 安装
 
@@ -61,19 +56,19 @@ npm run dev
    - 使用 Raycast 激活 **Chat Any** 扩展。
    - 执行 `Chat` 命令，扩展将自动收集选中的内容并**覆盖**到 `context.md` 文件中。
 
-2. **追加内容**：
-
-   - 在 Finder 中选中新的文件、文件夹或文本。
-   - 使用 Raycast 激活 **Chat Any** 扩展。
-   - 执行 `Chat Append` 命令，扩展将自动将选中的内容**追加**到 `context.md` 文件中。
-
-3. **查看汇总内容**：
+2. **查看汇总内容**：
 
    - 执行命令后，扩展会自动打开 `Documents/Chat Any` 目录和 `context.md` 文件，方便即时查看。
 
-4. **剪贴板操作**：
+3. **剪贴板操作**：
 
    - 如果没有选中文件或文本，扩展将尝试从剪贴板读取内容并汇总。
+
+4. **创建软链接**：
+
+   - 在 Finder 中选中一个或多个文件或文件夹。
+   - 使用 Raycast 激活 **Chat Any** 扩展。
+   - 执行 `Link Files` 命令，扩展将在 `Documents/Chat Any` 目录下创建选中项的软链接，方便在 Cursor 中直接编辑原文件。
 
 ## 项目结构
 
@@ -81,7 +76,7 @@ npm run dev
 chat-any/
 ├── src/
 │   ├── chat.ts          # 主脚本文件，处理文件读取和内容覆盖
-│   ├── chat-append.ts   # 脚本文件，处理内容追加
+│   ├── link-files.ts    # 脚本文件，处理软链接创建
 │   └── common.ts        # 公共函数
 ├── README.md
 ├── package.json

@@ -15,7 +15,6 @@ In daily development, I often need to copy and paste various texts into Cursor f
 
 - **Content Collection**: Automatically read selected text (or clipboard text), folders, or file contents.
 - **Centralized Editing**: Aggregate the collected content into a `context.md` file, stored in the user's `Documents/Chat Any` directory, and edit it with Cursor.
-- **Append Content**: Supports appending new content to the existing `context.md` file for continuous editing.
 
 ## Demo
 
@@ -31,11 +30,6 @@ Aggregate text from files and folders into one text file.
 
 https://github.com/user-attachments/assets/4e5030a9-b90a-41f2-867f-d2e9afc72088
 
-### 3. Append Mode
-
-Use append mode to aggregate code and error messages into one text file.
-
-https://github.com/user-attachments/assets/7dc16756-3aa9-4bc3-96e2-131fe33f5579
 
 ## Installation
 
@@ -61,17 +55,11 @@ npm run dev
    - Activate the **Chat Any** extension using Raycast.
    - Execute the `Chat` command; the extension will automatically collect the selected content and **overwrite** the `context.md` file.
 
-2. **Append Content**:
-
-   - Select new files, folders, or text in Finder.
-   - Activate the **Chat Any** extension using Raycast.
-   - Execute the `Chat Append` command; the extension will automatically **append** the selected content to the `context.md` file.
-
-3. **View Aggregated Content**:
+2. **View Aggregated Content**:
 
    - After executing the command, the extension will automatically open the `Documents/Chat Any` directory and the `context.md` file for immediate viewing.
 
-4. **Clipboard Operations**:
+3. **Clipboard Operations**:
 
    - If no files or text are selected, the extension will attempt to read content from the clipboard and aggregate it.
 
@@ -81,7 +69,6 @@ npm run dev
 chat-any/
 ├── src/
 │   ├── chat.ts          # Main script file, handles file reading and content overwriting
-│   ├── chat-append.ts   # Script file, handles content appending
 │   └── common.ts        # Common functions
 ├── README.md
 ├── package.json

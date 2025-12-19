@@ -14,12 +14,6 @@
       "mode": "no-view"
     },
     {
-      "name": "chat-append",
-      "title": "Chat Append",
-      "description": "Append selected text to context",
-      "mode": "no-view"
-    },
-    {
       "name": "open-chat-any",
       "title": "Open Chat Any",
       "description": "Open Chat Any directory in your editor",
