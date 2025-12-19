@@ -24,6 +24,12 @@
       "title": "Open Chat Any",
       "description": "Open Chat Any directory in your editor",
       "mode": "no-view"
+    },
+    {
+      "name": "link-files",
+      "title": "Link Files",
+      "description": "Create symlinks of selected files in Chat Any directory",
+      "mode": "no-view"
     }
   ],
   "preferences": [

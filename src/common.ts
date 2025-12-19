@@ -498,6 +498,88 @@ export async function openChatAnyDirectoryInEditor(): Promise<void> {
   }
 }
 
+/**
+ * Result of symlink creation operation.
+ */
+interface SymlinkResult {
+  created: number;
+  failed: number;
+}
+
+/**
+ * Creates a symlink for a single file or directory.
+ * If symlink already exists, it will be replaced.
+ * @param sourcePath - The source file/directory path.
+ * @returns Promise<boolean> - True if successful, false otherwise.
+ */
+export async function createSymlink(sourcePath: string): Promise<boolean> {
+  const fileName = path.basename(sourcePath);
+  const linkPath = path.join(CHAT_ANY_PATH, fileName);
+
+  try {
+    try {
+      const stats = await fs.lstat(linkPath);
+      if (stats.isSymbolicLink() || stats.isFile()) {
+        await fs.unlink(linkPath);
+      } else if (stats.isDirectory()) {
+        await fs.rm(linkPath, { recursive: true });
+      }
+    } catch {
+      // 文件不存在，忽略错误
+    }
+
+    await fs.symlink(sourcePath, linkPath);
+    return true;
+  } catch (error) {
+    console.error(`Failed to create symlink for: ${sourcePath}`, error);
+    return false;
+  }
+}
+
+/**
+ * Creates symlinks for all selected Finder items.
+ * @param selectedItems - Array of selected Finder items.
+ * @returns Promise<SymlinkResult> - Statistics of the operation.
+ */
+export async function createSymlinksForSelectedItems(
+  selectedItems: { path: string }[]
+): Promise<SymlinkResult> {
+  await ensureDirectoryExists(CHAT_ANY_PATH);
+
+  let created = 0;
+  let failed = 0;
+
+  const promises = selectedItems.map(async (item) => {
+    const success = await createSymlink(item.path);
+    if (success) {
+      created++;
+    } else {
+      failed++;
+    }
+  });
+
+  await Promise.all(promises);
+
+  await openDirectoryInEditor();
+
+  return { created, failed };
+}
+
+/**
+ * Opens the Chat Any directory in the configured editor.
+ */
+async function openDirectoryInEditor(): Promise<void> {
+  const execPromise = promisify(exec);
+  const preferences = getPreferenceValues<Preferences>();
+  const editorApp = preferences.customEditor?.name || 'Cursor';
+
+  try {
+    await execPromise(`open -a "${editorApp}" "${DIRECTORY_PATH}"`);
+  } catch (error) {
+    console.error('Failed to open directory in editor', error);
+  }
+}
+
 // Main Operation Function
 
 /**
