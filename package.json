@@ -24,6 +24,12 @@
       "title": "Link Files",
       "description": "Create symlinks of selected files in Chat Any directory",
       "mode": "no-view"
+    },
+    {
+      "name": "reverse-links",
+      "title": "Reverse Links",
+      "description": "Reverse all symlinks in Chat Any directory (swap original files with symlinks)",
+      "mode": "no-view"
     }
   ],
   "preferences": [

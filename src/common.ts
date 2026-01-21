@@ -589,6 +589,134 @@ async function openDirectoryInEditor(): Promise<void> {
  * and finally opens the file/directory in the configured editor.
  * @param operation - The operation mode: 'write' to overwrite the file, or 'append' to add to it.
  */
+/**
+ * Result of reverse symlinks operation.
+ */
+interface ReverseSymlinkResult {
+  total: number;
+  reversed: number;
+  failed: number;
+}
+
+/**
+ * Reverses all symlinks in the Chat Any directory.
+ * For each symlink:
+ * 1. Read the original file path (symlink target)
+ * 2. Copy the content from the original to the Chat Any directory (replacing the symlink)
+ * 3. Replace the original file with a symlink pointing to the Chat Any directory
+ * @returns Promise<ReverseSymlinkResult> - Statistics of the operation.
+ */
+export async function reverseAllSymlinks(): Promise<ReverseSymlinkResult> {
+  await ensureDirectoryExists(CHAT_ANY_PATH);
+
+  const result: ReverseSymlinkResult = {
+    total: 0,
+    reversed: 0,
+    failed: 0,
+  };
+
+  try {
+    const items = await fs.readdir(CHAT_ANY_PATH, { withFileTypes: true });
+
+    for (const item of items) {
+      const linkPath = path.join(CHAT_ANY_PATH, item.name);
+
+      try {
+        const stats = await fs.lstat(linkPath);
+        if (!stats.isSymbolicLink()) {
+          continue;
+        }
+
+        result.total++;
+
+        // Get the original file path (symlink target)
+        const originalPath = await fs.readlink(linkPath);
+
+        // Check if the original path is absolute, if not, resolve it
+        const absoluteOriginalPath = path.isAbsolute(originalPath)
+          ? originalPath
+          : path.resolve(path.dirname(linkPath), originalPath);
+
+        // Check if the original file exists
+        try {
+          await fs.access(absoluteOriginalPath);
+        } catch {
+          console.error(`Original file does not exist: ${absoluteOriginalPath}`);
+          result.failed++;
+          continue;
+        }
+
+        // Get the stats of the original file
+        const originalStats = await fs.lstat(absoluteOriginalPath);
+
+        if (originalStats.isSymbolicLink()) {
+          console.error(`Original file is already a symlink: ${absoluteOriginalPath}`);
+          result.failed++;
+          continue;
+        }
+
+        // Step 1: Read content from original location (or copy directory)
+        const tempPath = linkPath + '.tmp';
+
+        if (originalStats.isDirectory()) {
+          // For directories, copy recursively
+          await copyDirectoryRecursive(absoluteOriginalPath, tempPath);
+        } else {
+          // For files, copy content
+          await fs.copyFile(absoluteOriginalPath, tempPath);
+        }
+
+        // Step 2: Remove the symlink
+        await fs.unlink(linkPath);
+
+        // Step 3: Rename temp to actual path
+        await fs.rename(tempPath, linkPath);
+
+        // Step 4: Remove original file/directory
+        if (originalStats.isDirectory()) {
+          await fs.rm(absoluteOriginalPath, { recursive: true });
+        } else {
+          await fs.unlink(absoluteOriginalPath);
+        }
+
+        // Step 5: Create symlink at original location pointing to Chat Any
+        await fs.symlink(linkPath, absoluteOriginalPath);
+
+        result.reversed++;
+      } catch (error) {
+        console.error(`Failed to reverse symlink: ${linkPath}`, error);
+        result.failed++;
+      }
+    }
+  } catch (error) {
+    console.error('Failed to read Chat Any directory', error);
+    throw error;
+  }
+
+  return result;
+}
+
+/**
+ * Recursively copies a directory.
+ * @param src - Source directory path
+ * @param dest - Destination directory path
+ */
+async function copyDirectoryRecursive(src: string, dest: string): Promise<void> {
+  await fs.mkdir(dest, { recursive: true });
+  const entries = await fs.readdir(src, { withFileTypes: true });
+
+  for (const entry of entries) {
+    const srcPath = path.join(src, entry.name);
+    const destPath = path.join(dest, entry.name);
+
+    if (entry.isDirectory()) {
+      await copyDirectoryRecursive(srcPath, destPath);
+    } else {
+      await fs.copyFile(srcPath, destPath);
+    }
+  }
+}
+
 export async function handleChatOperation(operation: 'write' | 'append'): Promise<void> {
   const toast = await showToast({
     style: Toast.Style.Animated,
